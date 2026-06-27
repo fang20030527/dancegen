@@ -1,0 +1,156 @@
+import type { DanceTemplate } from "@/lib/dance/types";
+
+export const danceTemplates: DanceTemplate[] = [
+  {
+    id: "hip-hop",
+    name: "Hip-hop",
+    slug: "hip-hop",
+    description: "Sharp footwork and confident upper-body rhythm for Shorts and Reels.",
+    platformTags: ["TikTok", "Reels", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "controlled hip-hop groove, no floorwork, no sexualized gestures",
+      camera: "static waist-up to full-body crop, stable framing",
+      safety: "single adult person, fully clothed, neutral expression",
+    },
+  },
+  {
+    id: "k-pop",
+    name: "K-pop style",
+    slug: "k-pop-style",
+    description: "Polished pop choreography with clean arm lines and camera-safe pacing.",
+    platformTags: ["TikTok", "Reels"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "upbeat K-pop-inspired dance, symmetrical hand moves",
+      camera: "portrait crop, subtle push-in, no body distortion",
+      safety: "avoid suggestive movement and keep clothing unchanged",
+    },
+  },
+  {
+    id: "shuffle",
+    name: "Shuffle",
+    slug: "shuffle",
+    description: "Fast but simple steps designed for full-body source photos.",
+    platformTags: ["TikTok", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "light shuffle footwork, upper body remains natural",
+      camera: "full-body framing with minimal camera motion",
+      safety: "preserve identity and clothing, no exaggerated anatomy",
+    },
+  },
+  {
+    id: "salsa",
+    name: "Salsa",
+    slug: "salsa",
+    description: "Bright social-dance energy without partner interaction.",
+    platformTags: ["Reels", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "solo salsa side steps and shoulder rhythm",
+      camera: "stable medium shot, clean background motion",
+      safety: "no partner, no intimate movement, no costume change",
+    },
+  },
+  {
+    id: "robot",
+    name: "Robot dance",
+    slug: "robot-dance",
+    description: "Mechanical pop-lock movement with low ambiguity and stable pose changes.",
+    platformTags: ["TikTok", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "robotic arm isolations, controlled torso movement",
+      camera: "static portrait crop, no fast zooms",
+      safety: "fully clothed adult, no sexualized pose",
+    },
+  },
+  {
+    id: "fitness",
+    name: "Fitness dance",
+    slug: "fitness-dance",
+    description: "Workout-adjacent motion for brand-safe creator testing.",
+    platformTags: ["Reels", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "low-impact dance cardio, simple arm swings",
+      camera: "full-body or three-quarter crop",
+      safety: "avoid body-emphasis framing and suggestive motion",
+    },
+  },
+  {
+    id: "party",
+    name: "Party dance",
+    slug: "party-dance",
+    description: "Casual celebratory movement for lightweight social clips.",
+    platformTags: ["TikTok", "Reels", "Shorts"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "casual party dance, hands up, small steps",
+      camera: "steady medium crop with upbeat pacing",
+      safety: "no nightlife sexualization, preserve clothing",
+    },
+  },
+  {
+    id: "catwalk",
+    name: "Catwalk",
+    slug: "catwalk",
+    description: "A short confident walk cycle for fashion and profile content tests.",
+    platformTags: ["TikTok", "Reels"],
+    risk: "low",
+    isPublic: true,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "catwalk step, upright posture, no revealing gestures",
+      camera: "portrait crop with clean forward motion",
+      safety: "keep styling unchanged and avoid sexualized posing",
+    },
+  },
+  {
+    id: "twerk-internal",
+    name: "Twerk internal test",
+    slug: "twerk-internal",
+    description: "Internal-only template for safety evaluation. Not available in public MVP.",
+    platformTags: ["Internal"],
+    risk: "internal",
+    isPublic: false,
+    durationSeconds: 5,
+    providerPayloadVersion: "dancegen-seedance-v1",
+    modelHints: {
+      motion: "internal safety evaluation only",
+      camera: "not public",
+      safety: "blocked from public generator",
+    },
+  },
+];
+
+export function getPublicDanceTemplates() {
+  return danceTemplates.filter((template) => template.isPublic);
+}
+
+export function getTemplateById(templateId: string) {
+  return danceTemplates.find((template) => template.id === templateId);
+}
