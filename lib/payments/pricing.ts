@@ -15,6 +15,18 @@ export const pricingPlans = {
   },
 } as const;
 
+export const pricingPlanKeys = [pricingPlans.singleUnlock.key, pricingPlans.creatorMonthly.key] as const;
+
+export type PricingPlanKey = (typeof pricingPlanKeys)[number];
+
+export function isPricingPlanKey(value: unknown): value is PricingPlanKey {
+  return typeof value === "string" && pricingPlanKeys.includes(value as PricingPlanKey);
+}
+
+export function getPricingPlanByKey(key: PricingPlanKey) {
+  return Object.values(pricingPlans).find((plan) => plan.key === key);
+}
+
 export const starterEntitlements = {
   freeGenerationsAfterGoogleLogin: 1,
   resultRetentionDaysMin: 7,

@@ -1,6 +1,6 @@
 import { Check, CreditCard } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { PricingCheckoutButton } from "@/components/sections/pricing-checkout-button";
 import { pricingPlans } from "@/lib/payments/pricing";
 
 export function PricingCards() {
@@ -36,9 +36,7 @@ export function PricingCards() {
                   </li>
                 ))}
               </ul>
-              <Button asChild className="mt-7 w-full" variant={plan.key === "single_hd_unlock" ? "primary" : "dark"}>
-                <a href="/api/auth/google?redirectTo=/ai-dance-generator">Start</a>
-              </Button>
+              <PricingCheckoutButton priceKey={plan.key} variant={plan.key === "single_hd_unlock" ? "primary" : "dark"} />
             </article>
           ))}
         </div>

@@ -149,11 +149,14 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
         taskId: task?.id,
       }),
     });
-    const payload = (await response.json()) as { checkoutUrl?: string };
+    const payload = (await response.json().catch(() => null)) as { checkoutUrl?: string; message?: string } | null;
 
-    if (payload.checkoutUrl) {
-      window.location.href = payload.checkoutUrl;
+    if (!response.ok || !payload?.checkoutUrl) {
+      setError(payload?.message || "Checkout could not start. Please try again.");
+      return;
     }
+
+    window.location.href = payload.checkoutUrl;
   }
 
   const canReview = Boolean(file) && rightsConfirmed && reviewState !== "reviewing";
