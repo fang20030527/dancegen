@@ -85,7 +85,7 @@ export function getCreemProductId(priceKey: PricingPlanKey) {
     [pricingPlans.creatorMonthly.key]: "CREEM_CREATOR_MONTHLY_PRICE_ID",
   };
   const envName = envNameByPriceKey[priceKey];
-  const productId = process.env[envName]?.trim() || (priceKey === pricingPlans.singleUnlock.key ? process.env.CREEM_PRODUCT_ID?.trim() : "");
+  const productId = getOptionalCreemEnv(envName) || (priceKey === pricingPlans.singleUnlock.key ? getOptionalCreemEnv("CREEM_PRODUCT_ID") : "");
 
   if (!productId) {
     throw new CreemConfigError(`Missing ${envName} for ${priceKey}. Creem checkout sessions require a product_id.`);
@@ -99,8 +99,8 @@ export function getPriceKeyForCreemProduct(productId: string | null | undefined)
     return null;
   }
 
-  const singleProductId = process.env.CREEM_SINGLE_UNLOCK_PRICE_ID?.trim() || process.env.CREEM_PRODUCT_ID?.trim();
-  const creatorProductId = process.env.CREEM_CREATOR_MONTHLY_PRICE_ID?.trim();
+  const singleProductId = getOptionalCreemEnv("CREEM_SINGLE_UNLOCK_PRICE_ID") || getOptionalCreemEnv("CREEM_PRODUCT_ID");
+  const creatorProductId = getOptionalCreemEnv("CREEM_CREATOR_MONTHLY_PRICE_ID");
 
   if (productId === singleProductId) {
     return pricingPlans.singleUnlock.key;
@@ -255,6 +255,16 @@ function requireEnv(name: string) {
 
   if (!value) {
     throw new CreemConfigError(`Missing ${name}.`);
+  }
+
+  return value;
+}
+
+function getOptionalCreemEnv(name: string) {
+  const value = process.env[name]?.trim();
+
+  if (!value || value.toUpperCase().startsWith("TODO")) {
+    return "";
   }
 
   return value;

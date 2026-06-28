@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { auth } from "@/lib/auth";
 import { aspectRatios } from "@/lib/dance/types";
 import { getTemplateById } from "@/lib/dance/templates";
 import { mockSeedanceProvider } from "@/lib/providers/mock-seedance";
@@ -13,9 +14,11 @@ const generationSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const hasDemoSession = request.cookies.get("dancegen_demo_session")?.value === "true";
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
 
-  if (!hasDemoSession) {
+  if (!session?.user?.id) {
     return NextResponse.json(
       {
         code: "GOOGLE_AUTH_REQUIRED",
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   const task = await mockSeedanceProvider.submitDanceVideo({
     idempotencyKey: payload.data.idempotencyKey,
-    userId: "demo-user",
+    userId: session.user.id,
     uploadObjectKey: "demo/local-upload",
     templateId: payload.data.templateId,
     aspectRatio: payload.data.aspectRatio,
