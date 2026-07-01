@@ -1,32 +1,39 @@
+import Image from "next/image";
 import Link from "next/link";
 
-const legalLinks = [
+const footerLinks = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refund-policy", label: "Refunds" },
+  { href: "mailto:abuse@dancegen.ai", label: "Report abuse" },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-ink/10 bg-ink text-paper">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto] lg:px-8">
-        <div>
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-acid">DanceGen AI</p>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-paper/68">
-            A conservative MVP for single-photo AI dance video generation. Public output stays low-risk,
-            short, silent, watermarked, and review-gated.
-          </p>
+    <footer className="border-t-4 border-neutral-700 bg-ink text-paper">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-8 md:grid-cols-[360px_1fr] md:items-start">
+          <div className="relative h-16 w-[252px] overflow-hidden">
+            <Image alt="DanceGen" className="scale-[1.85] object-cover object-center invert" fill sizes="252px" src="/DanceGen.svg" />
+          </div>
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-black leading-tight tracking-normal text-paper sm:text-4xl">
+              AI dance videos from one photo.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-paper/70 sm:text-lg">
+              DanceGen helps creators turn a single source photo into short 9:16 AI dance clips for TikTok,
+              Reels, and Shorts. Upload a clear solo photo, choose a template, and generate a silent preview
+              in seconds.
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-start gap-3 text-sm text-paper/68 md:justify-end">
-          {legalLinks.map((link) => (
-            <Link className="rounded-full px-3 py-2 transition hover:bg-white/8 hover:text-paper" href={link.href} key={link.href}>
+        <nav aria-label="Footer links" className="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-paper/42 md:justify-end">
+          {footerLinks.map((link) => (
+            <Link className="transition hover:text-paper" href={link.href} key={link.href}>
               {link.label}
             </Link>
           ))}
-          <a className="rounded-full px-3 py-2 transition hover:bg-white/8 hover:text-paper" href="mailto:abuse@dancegen.ai">
-            Report abuse
-          </a>
-        </div>
+        </nav>
       </div>
     </footer>
   );

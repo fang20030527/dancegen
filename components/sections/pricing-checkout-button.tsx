@@ -9,9 +9,10 @@ import type { PricingPlanKey } from "@/lib/payments/pricing";
 type PricingCheckoutButtonProps = {
   priceKey: PricingPlanKey;
   variant: ButtonProps["variant"];
+  label?: string;
 };
 
-export function PricingCheckoutButton({ priceKey, variant }: PricingCheckoutButtonProps) {
+export function PricingCheckoutButton({ priceKey, variant, label = "Start" }: PricingCheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +43,7 @@ export function PricingCheckoutButton({ priceKey, variant }: PricingCheckoutButt
     <div className="mt-7">
       <Button className="w-full" disabled={isLoading} onClick={startCheckout} type="button" variant={variant}>
         {isLoading ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : null}
-        {isLoading ? "Opening checkout" : "Start"}
+        {isLoading ? "Opening checkout" : label}
       </Button>
       {error ? (
         <p aria-live="polite" className="mt-3 text-sm font-semibold text-coral">

@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Helvetica Neue"', "Helvetica", "Arial", "sans-serif"],
+      },
       colors: {
         ink: "#090907",
         studio: "#11110f",

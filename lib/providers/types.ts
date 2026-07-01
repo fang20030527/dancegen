@@ -1,3 +1,4 @@
+import type { DanceModelId } from "@/lib/dance/models";
 import type { AspectRatio, DanceGenerationTask } from "@/lib/dance/types";
 
 export type DanceVideoRequest = {
@@ -6,6 +7,7 @@ export type DanceVideoRequest = {
   uploadObjectKey: string;
   templateId: string;
   aspectRatio: AspectRatio;
+  modelId: DanceModelId;
 };
 
 export type ModelProvider = {

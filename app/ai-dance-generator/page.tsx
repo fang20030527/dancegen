@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { GeneratorPanel } from "@/components/generator/generator-panel";
 import { SafetyFlow } from "@/components/sections/safety-flow";
 import { TemplateGrid } from "@/components/sections/template-grid";
+import { auth } from "@/lib/auth";
 import { getPublicDanceTemplates } from "@/lib/dance/templates";
+import { userHasActiveCreatorSubscription } from "@/lib/payments/entitlements";
 
 export const metadata: Metadata = {
   title: "AI Dance Generator",
   description: "Upload one adult solo photo and generate a safe 5-second silent AI dance video preview.",
 };
 
-export default function AiDanceGeneratorPage() {
+export default async function AiDanceGeneratorPage() {
   const templates = getPublicDanceTemplates();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const hasCreatorMonthlyAccess = session?.user?.id ? await userHasActiveCreatorSubscription(session.user.id) : false;
 
   return (
     <main>
@@ -25,7 +32,7 @@ export default function AiDanceGeneratorPage() {
               Start with a conservative upload pre-check, generate a watermarked preview, then unlock HD only when the result works.
             </p>
           </div>
-          <GeneratorPanel templates={templates} />
+          <GeneratorPanel hasCreatorMonthlyAccess={hasCreatorMonthlyAccess} templates={templates} />
         </div>
       </section>
       <TemplateGrid templates={templates} />

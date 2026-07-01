@@ -61,4 +61,6 @@ export type UploadReviewResult = {
   allowed: boolean;
   reasonCode?: string;
   userMessage: string;
+  uploadObjectKey?: string;
+  sourceUrlExpiresAt?: string;
 };

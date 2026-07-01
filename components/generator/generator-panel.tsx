@@ -5,17 +5,17 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
-  Clapperboard,
+  ChevronRight,
   Download,
   FileWarning,
   ImageUp,
   Loader2,
   LockKeyhole,
-  ShieldCheck,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { danceModelOptions, standardDanceModelId, type DanceModelId } from "@/lib/dance/models";
 import type { AspectRatio, DanceGenerationTask, DanceTemplate, UploadReviewResult } from "@/lib/dance/types";
 import { pricingPlans } from "@/lib/payments/pricing";
 import { cn } from "@/lib/utils";
@@ -26,9 +26,21 @@ type GenerationState = "idle" | "submitting" | "processing" | "succeeded" | "err
 type GeneratorPanelProps = {
   templates: DanceTemplate[];
   compact?: boolean;
+  hasCreatorMonthlyAccess?: boolean;
 };
 
-const aspectOptions: AspectRatio[] = ["9:16", "1:1", "16:9"];
+const aspectOptions: AspectRatio[] = ["9:16"];
+const visibleTemplateCount = 4;
+const templateVideoSources = [
+  "/template-videos/template-2.mp4",
+  "/template-videos/template-3.mp4",
+  "/template-videos/template-4.mp4",
+  "/template-videos/template-5.mp4",
+  "/template-videos/template-6.mp4",
+  "/template-videos/template-7.mp4",
+  "/template-videos/template-8.mp4",
+  "/template-videos/template-7-1.mp4",
+];
 
 function createIdempotencyKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -38,9 +50,31 @@ function createIdempotencyKey() {
   return `dance_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-export function GeneratorPanel({ templates, compact = false }: GeneratorPanelProps) {
+function getVisibleTemplateWindow(templates: DanceTemplate[], startIndex: number) {
+  if (templates.length <= visibleTemplateCount) {
+    return templates;
+  }
+
+  return Array.from({ length: visibleTemplateCount }, (_, offset) => templates[(startIndex + offset) % templates.length]);
+}
+
+function getTemplateVideoSource(templateIndex: number) {
+  return templateVideoSources[templateIndex % templateVideoSources.length];
+}
+
+function isTerminalTask(task: DanceGenerationTask) {
+  return task.status === "succeeded" || task.status === "failed_refunded" || task.status === "blocked_refunded";
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAccess = false }: GeneratorPanelProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "hip-hop");
+  const [templateWindowStart, setTemplateWindowStart] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
+  const [selectedModelId, setSelectedModelId] = useState<DanceModelId>(standardDanceModelId);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -50,10 +84,7 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
   const [task, setTask] = useState<DanceGenerationTask | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedTemplate = useMemo(
-    () => templates.find((template) => template.id === selectedTemplateId) ?? templates[0],
-    [selectedTemplateId, templates],
-  );
+  const visibleTemplates = useMemo(() => getVisibleTemplateWindow(templates, templateWindowStart), [templateWindowStart, templates]);
 
   useEffect(() => {
     return () => {
@@ -74,6 +105,15 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
     setError(null);
   }
 
+  function handleModelSelect(modelId: DanceModelId) {
+    setSelectedModelId(modelId);
+    setReviewState("idle");
+    setReviewResult(null);
+    setTask(null);
+    setGenerationState("idle");
+    setError(null);
+  }
+
   async function reviewUpload() {
     if (!file) {
       setError("Upload a clear solo photo first.");
@@ -86,6 +126,7 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
     const formData = new FormData();
     formData.append("image", file);
     formData.append("rightsConfirmed", String(rightsConfirmed));
+    formData.append("modelId", selectedModelId);
 
     const response = await fetch("/api/review/upload", {
       method: "POST",
@@ -113,18 +154,21 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
         idempotencyKey: createIdempotencyKey(),
         templateId: selectedTemplateId,
         aspectRatio,
+        modelId: selectedModelId,
+        uploadObjectKey: reviewResult?.uploadObjectKey,
         rightsConfirmed,
       }),
     });
 
     if (response.status === 401) {
-      window.location.href = "/api/auth/google?redirectTo=/ai-dance-generator";
+      window.location.assign("/api/auth/google?redirectTo=/ai-dance-generator");
       return;
     }
 
     if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
       setGenerationState("error");
-      setError("Generation could not start. Try another image or template.");
+      setError(payload?.message || "Generation could not start. Try another image or template.");
       return;
     }
 
@@ -132,12 +176,46 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
     setTask(submittedTask);
     setGenerationState("processing");
 
-    window.setTimeout(async () => {
-      const statusResponse = await fetch(`/api/dance/status/${submittedTask.id}`);
-      const { task: completedTask } = (await statusResponse.json()) as { task: DanceGenerationTask };
-      setTask(completedTask);
-      setGenerationState("succeeded");
-    }, 900);
+    if (isTerminalTask(submittedTask)) {
+      setGenerationState(submittedTask.status === "succeeded" ? "succeeded" : "error");
+      return;
+    }
+
+    await pollGenerationTask(submittedTask.id);
+  }
+
+  async function pollGenerationTask(taskId: string) {
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      await delay(attempt === 0 ? 1200 : 3000);
+
+      const statusResponse = await fetch(`/api/dance/status/${taskId}`);
+      const payload = (await statusResponse.json().catch(() => null)) as {
+        message?: string;
+        task?: DanceGenerationTask;
+      } | null;
+
+      if (!statusResponse.ok || !payload?.task) {
+        setGenerationState("error");
+        setError(payload?.message || "Generation status could not be loaded.");
+        return;
+      }
+
+      setTask(payload.task);
+
+      if (payload.task.status === "succeeded") {
+        setGenerationState("succeeded");
+        return;
+      }
+
+      if (payload.task.status === "failed_refunded" || payload.task.status === "blocked_refunded") {
+        setGenerationState("error");
+        setError(payload.task.failureReason || "Generation did not complete. Your generation should be refunded.");
+        return;
+      }
+    }
+
+    setGenerationState("error");
+    setError("Generation is still processing. Check the task again in a few minutes.");
   }
 
   async function startCheckout() {
@@ -159,8 +237,13 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
     window.location.href = payload.checkoutUrl;
   }
 
+  function showNextTemplateWindow() {
+    setTemplateWindowStart((currentIndex) => (templates.length ? (currentIndex + visibleTemplateCount) % templates.length : 0));
+  }
+
   const canReview = Boolean(file) && rightsConfirmed && reviewState !== "reviewing";
   const canGenerate = reviewState === "passed" && generationState !== "submitting" && generationState !== "processing";
+  const canMoveTemplates = templates.length > visibleTemplateCount;
 
   return (
     <section
@@ -169,12 +252,15 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
         compact && "shadow-none",
       )}
     >
-      <div className="rounded-[24px] border border-ink/10 bg-ink p-3 text-paper">
-        <div className="relative min-h-[520px] overflow-hidden rounded-[18px] bg-studio">
+      <label
+        className="flex cursor-pointer rounded-[24px] border border-ink/10 bg-ink p-3 text-paper"
+        htmlFor="source-photo-input"
+      >
+        <div className="relative min-h-[520px] flex-1 overflow-hidden rounded-[18px] bg-studio">
           {previewUrl ? (
-            <img className="h-[520px] w-full object-cover opacity-88" src={previewUrl} alt="Uploaded source preview" />
+            <img className="h-full min-h-[520px] w-full object-cover opacity-88" src={previewUrl} alt="Uploaded source preview" />
           ) : (
-            <div className="studio-grid flex h-[520px] flex-col items-center justify-center px-8 text-center">
+            <div className="studio-grid flex h-full min-h-[520px] flex-col items-center justify-center px-8 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-acid text-ink">
                 <ImageUp aria-hidden="true" size={30} strokeWidth={1.9} />
               </div>
@@ -184,42 +270,12 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
               </p>
             </div>
           )}
-
-          <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-            <Badge className="border-white/18 bg-black/45 text-paper">5s silent MP4</Badge>
-            <Badge className="border-white/18 bg-black/45 text-paper">Watermarked preview</Badge>
-          </div>
-
-          <div className="absolute bottom-4 left-4 right-4 rounded-[18px] border border-white/15 bg-black/58 p-4 backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-acid">Current template</p>
-                <p className="mt-1 text-lg font-black">{selectedTemplate?.name}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-acid text-ink">
-                {generationState === "processing" ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" size={22} />
-                ) : (
-                  <Clapperboard aria-hidden="true" size={22} />
-                )}
-              </div>
-            </div>
-            {task?.previewUrl && generationState === "succeeded" ? (
-              <div className="mt-3 flex items-center gap-2 rounded-full bg-acid px-3 py-2 text-xs font-black text-ink">
-                <CheckCircle2 aria-hidden="true" size={16} /> Preview generated and awaiting HD unlock
-              </div>
-            ) : null}
-          </div>
         </div>
-      </div>
+      </label>
 
       <div className="flex flex-col gap-5">
         <div>
-          <div className="flex items-center gap-2 text-sm font-black text-ink">
-            <ShieldCheck aria-hidden="true" size={18} />
-            Conservative input gate
-          </div>
-          <h2 className="mt-3 text-3xl font-black leading-tight tracking-normal text-ink md:text-4xl">
+          <h2 className="text-3xl font-black leading-tight tracking-normal text-ink md:text-4xl">
             Build a safe dance clip from one photo.
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-6 text-ink/64">
@@ -227,38 +283,98 @@ export function GeneratorPanel({ templates, compact = false }: GeneratorPanelPro
           </p>
         </div>
 
-        <label className="block">
-          <span className="mb-2 block text-sm font-bold text-ink">Source photo</span>
-          <input
-            accept="image/png,image/jpeg,image/webp"
-            className="block w-full rounded-2xl border border-ink/12 bg-paper p-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-bold file:text-paper hover:border-ink/26 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-ink"
-            onChange={handleFileChange}
-            type="file"
-          />
-        </label>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          className="sr-only"
+          id="source-photo-input"
+          onChange={handleFileChange}
+          type="file"
+        />
 
         <div>
           <p className="mb-2 text-sm font-bold text-ink">Dance template</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {templates.map((template) => (
-              <button
-                className={cn(
-                  "rounded-2xl border border-ink/10 bg-paper p-3 text-left text-sm font-bold transition hover:border-ink/28",
-                  selectedTemplateId === template.id && "border-ink bg-ink text-paper shadow-acid-ring",
-                )}
-                key={template.id}
-                onClick={() => setSelectedTemplateId(template.id)}
-                type="button"
-              >
-                {template.name}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <div className="grid flex-1 grid-cols-4 gap-3">
+              {visibleTemplates.map((template, index) => (
+                <button
+                  aria-label={`Select ${template.name} template`}
+                  className={cn(
+                    "relative aspect-[9/16] overflow-hidden rounded-[22px] border-2 border-ink/18 bg-ink transition hover:border-ink/40",
+                    selectedTemplateId === template.id && "border-[3px] border-ink shadow-acid-ring",
+                  )}
+                  key={template.id}
+                  onClick={() => setSelectedTemplateId(template.id)}
+                  type="button"
+                >
+                  <video
+                    autoPlay
+                    className="h-full w-full object-cover"
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    src={getTemplateVideoSource(templateWindowStart + index)}
+                  />
+                  {selectedTemplateId === template.id ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-2.5 top-2.5 h-3 w-3 rounded-full border border-ink/30 bg-acid shadow-[0_0_0_3px_rgba(198,255,0,0.28)]"
+                    />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+            <button
+              aria-label="Show next dance templates"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/12 bg-white text-ink shadow-sm transition hover:border-ink hover:bg-acid disabled:cursor-not-allowed disabled:opacity-35"
+              disabled={!canMoveTemplates}
+              onClick={showNextTemplateWindow}
+              type="button"
+            >
+              <ChevronRight aria-hidden="true" size={22} strokeWidth={2.4} />
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-bold text-ink">Model</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {danceModelOptions.map((model) => {
+              const isSelected = selectedModelId === model.id;
+              const isLocked = model.tier === "member" && !hasCreatorMonthlyAccess;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "flex min-h-[96px] flex-col items-start rounded-[18px] border border-ink/10 bg-paper p-4 text-left transition hover:border-ink/28 disabled:cursor-not-allowed disabled:opacity-52",
+                    isSelected && "border-ink bg-acid text-ink shadow-acid-ring",
+                  )}
+                  disabled={isLocked}
+                  key={model.id}
+                  onClick={() => handleModelSelect(model.id)}
+                  title={isLocked ? "Creator plan required" : model.name}
+                  type="button"
+                >
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span className="text-sm font-black">{model.name}</span>
+                    {model.tier === "member" ? (
+                      <Badge className={cn("bg-white text-ink", isSelected && "border-ink/20")}>
+                        {isLocked ? <LockKeyhole aria-hidden="true" size={13} /> : null}
+                        Members
+                      </Badge>
+                    ) : null}
+                  </span>
+                  <span className="mt-2 text-xs font-semibold leading-5 text-ink/58">{model.description}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div>
           <p className="mb-2 text-sm font-bold text-ink">Aspect ratio</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid gap-2">
             {aspectOptions.map((option) => (
               <button
                 className={cn(

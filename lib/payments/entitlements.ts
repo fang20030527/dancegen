@@ -85,6 +85,31 @@ export async function recordPendingCreemCheckout(session: CreemCheckoutSession) 
   return { stored: true };
 }
 
+export async function userHasActiveCreatorSubscription(userId: string) {
+  const database = getPaymentPool();
+
+  if (!database) {
+    return false;
+  }
+
+  await ensurePaymentTables(database);
+
+  const result = await database.query(
+    `
+      SELECT 1
+      FROM payment_entitlements
+      WHERE user_id = $1
+        AND plan_key = $2
+        AND status IN ('active', 'trialing', 'scheduled_cancel')
+        AND (valid_until IS NULL OR valid_until > now())
+      LIMIT 1
+    `,
+    [userId, pricingPlans.creatorMonthly.key],
+  );
+
+  return Boolean(result.rowCount);
+}
+
 export async function applyCreemWebhookEvent(event: CreemWebhookEvent): Promise<ApplyCreemWebhookResult> {
   const database = getPaymentPool();
   const eventType = getCreemWebhookEventType(event);
