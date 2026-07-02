@@ -22,7 +22,7 @@ Keep the product narrower than a generic AI SaaS template:
 - Payment target: Creem checkout + webhook. Webhook is the production source of truth.
 - Persistence target: PostgreSQL + Drizzle for users, tasks, entitlements, payments, audit logs, and templates.
 - Storage target: R2 or S3-compatible storage for uploads, generated videos, and limited-time downloads.
-- Model target: Seedance via EvoLink first, always behind `ModelProvider`.
+- Model target: Viggle for the default public generator and Seedance via EvoLink for member generation, always behind `ModelProvider`.
 
 ## Core Domain Rules
 

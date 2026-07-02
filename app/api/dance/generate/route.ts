@@ -9,6 +9,8 @@ import { userHasActiveCreatorSubscription } from "@/lib/payments/entitlements";
 import { getDanceVideoProvider } from "@/lib/providers/dance-provider";
 import { EvolinkConfigError } from "@/lib/providers/evolink-config";
 import { EvolinkProviderError } from "@/lib/providers/evolink-seedance";
+import { ViggleConfigError } from "@/lib/providers/viggle-config";
+import { ViggleProviderError } from "@/lib/providers/viggle-render";
 
 const generationSchema = z.object({
   idempotencyKey: z.string().min(12),
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const payload = generationSchema.safeParse(await request.json());
+  const { payload, sourceImageFile } = await parseGenerationRequest(request);
 
   if (!payload.success) {
     return NextResponse.json(
@@ -90,12 +92,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!payload.data.uploadObjectKey && !sourceImageFile) {
+    return NextResponse.json(
+      {
+        code: "SOURCE_IMAGE_REQUIRED",
+        message: "Upload a clear source photo before generating the dance video.",
+      },
+      { status: 409 },
+    );
+  }
+
   try {
     const provider = getDanceVideoProvider(payload.data.modelId);
     const task = await provider.submitDanceVideo({
       idempotencyKey: payload.data.idempotencyKey,
       userId: session.user.id,
-      uploadObjectKey: payload.data.uploadObjectKey || "demo/local-upload",
+      uploadObjectKey: payload.data.uploadObjectKey || "",
+      sourceImageFile,
       templateId: payload.data.templateId,
       aspectRatio: payload.data.aspectRatio,
       modelId: payload.data.modelId,
@@ -103,9 +116,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ task }, { status: 202 });
   } catch (error) {
-    const status = error instanceof EvolinkConfigError ? 503 : 502;
+    const status = isProviderConfigError(error) ? 503 : 502;
     const message =
-      error instanceof EvolinkConfigError || error instanceof EvolinkProviderError
+      isKnownProviderError(error)
         ? error.message
         : "Generation could not start. Try another image or template.";
 
@@ -117,4 +130,56 @@ export async function POST(request: NextRequest) {
       { status },
     );
   }
+}
+
+async function parseGenerationRequest(request: NextRequest) {
+  if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+    return parseMultipartGenerationRequest(request);
+  }
+
+  return {
+    payload: generationSchema.safeParse(await request.json()),
+    sourceImageFile: undefined,
+  };
+}
+
+async function parseMultipartGenerationRequest(request: NextRequest) {
+  const formData = await request.formData();
+
+  return {
+    payload: generationSchema.safeParse({
+      idempotencyKey: getFormString(formData, "idempotencyKey"),
+      templateId: getFormString(formData, "templateId"),
+      aspectRatio: getFormString(formData, "aspectRatio"),
+      modelId: getFormString(formData, "modelId"),
+      uploadObjectKey: getFormString(formData, "uploadObjectKey"),
+      rightsConfirmed: formData.get("rightsConfirmed") === "true",
+    }),
+    sourceImageFile: getFormFile(formData, "image"),
+  };
+}
+
+function getFormString(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function getFormFile(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return value instanceof File && value.size > 0 ? value : undefined;
+}
+
+function isProviderConfigError(error: unknown) {
+  return error instanceof EvolinkConfigError || error instanceof ViggleConfigError;
+}
+
+function isKnownProviderError(error: unknown): error is Error {
+  return (
+    error instanceof EvolinkConfigError ||
+    error instanceof EvolinkProviderError ||
+    error instanceof ViggleConfigError ||
+    error instanceof ViggleProviderError
+  );
 }

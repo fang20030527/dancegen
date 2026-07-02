@@ -1,4 +1,5 @@
 import { advancedDanceModelId } from "@/lib/dance/models";
+import { defaultMotionTransferPrompt } from "@/lib/dance/prompts";
 import { getTemplateById } from "@/lib/dance/templates";
 import type { DanceGenerationTask, TaskStatus } from "@/lib/dance/types";
 import { getConfiguredProviderModelId, getEvolinkApiKey, getEvolinkApiUrl } from "@/lib/providers/evolink-config";
@@ -92,7 +93,7 @@ function buildGenerationPayload(request: DanceVideoRequest) {
 
   return {
     model: getConfiguredProviderModelId(request.modelId),
-    prompt: buildPrompt(request),
+    prompt: defaultMotionTransferPrompt,
     image_urls: [getPublicSourceUrl(request.uploadObjectKey)],
     duration,
     aspect_ratio: request.aspectRatio,
@@ -100,22 +101,6 @@ function buildGenerationPayload(request: DanceVideoRequest) {
     generate_audio: false,
     content_filter: true,
   };
-}
-
-function buildPrompt(request: DanceVideoRequest) {
-  const template = getTemplateById(request.templateId);
-  const hints = template?.modelHints;
-  const duration = template?.durationSeconds ?? 5;
-
-  return [
-    `Use @Image1 as the sole identity and pose reference for a ${duration}-second silent vertical dance clip.`,
-    hints?.motion ? `Motion: ${hints.motion}.` : null,
-    hints?.camera ? `Camera: ${hints.camera}.` : null,
-    hints?.safety ? `Safety: ${hints.safety}.` : null,
-    "Preserve clothing, face identity, and body proportions. Do not add music, captions, logos, nudity, minors, or extra people.",
-  ]
-    .filter(Boolean)
-    .join(" ");
 }
 
 function getPublicSourceUrl(uploadObjectKey: string) {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { GPTImageGenerationLoader } from "@/components/ui/gpt-image-generation-loader";
 import { cn } from "@/lib/utils";
 
 const heroVideos = [
@@ -48,7 +49,12 @@ function HeroVideoFrames() {
 function HeroAcidField({ className, clipPath }: { className: string; clipPath: string }) {
   return (
     <div aria-hidden="true" className={cn("absolute overflow-hidden bg-acid", className)} style={{ clipPath }}>
-      <div className="hero-dot-field" />
+      <GPTImageGenerationLoader
+        className="absolute inset-0"
+        dotGap={7}
+        speed={1.08}
+        variant="field"
+      />
     </div>
   );
 }
@@ -65,7 +71,7 @@ export function HeroSection() {
         clipPath="polygon(34% 0, 100% 0, 100% 100%, 0 100%)"
       />
       <HeroVideoFrames />
-      <div className="relative mx-auto flex min-h-[76dvh] max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex min-h-[76dvh] max-w-[1500px] items-center px-4 py-16 sm:px-6 lg:px-8">
         <div className="relative z-20 max-w-2xl animate-slide-up">
           <h1 className="max-w-2xl text-5xl font-black leading-[1.02] tracking-normal text-ink md:text-6xl lg:text-7xl">
             Free AI Dance
@@ -73,7 +79,8 @@ export function HeroSection() {
             Video Generator
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-ink/68 md:text-lg">
-            Generate safe 5-second silent clips for TikTok, Reels, and Shorts tests.
+            Upload one photo, choose a viral dance template, and instantly create a dance clip for TikTok, Reels, and
+            Shorts.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild>

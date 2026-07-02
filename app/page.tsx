@@ -21,7 +21,10 @@ export default async function HomePage() {
       <HeroSection />
       <div aria-hidden="true" className="h-1 bg-neutral-700" />
       <section className="bg-paper py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
+          <h2 className="mb-10 max-w-3xl text-4xl font-black leading-tight tracking-normal text-ink md:text-6xl">
+            Turn One Photo Into a Dance Video
+          </h2>
           <GeneratorPanel hasCreatorMonthlyAccess={hasCreatorMonthlyAccess} templates={templates} />
         </div>
       </section>

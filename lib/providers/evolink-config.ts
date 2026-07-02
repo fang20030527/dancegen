@@ -1,4 +1,4 @@
-import { advancedDanceModelId, standardDanceModelId, type DanceModelId } from "@/lib/dance/models";
+import { advancedDanceModelId, type DanceModelId } from "@/lib/dance/models";
 
 const DEFAULT_EVOLINK_API_URL = "https://api.evolink.ai";
 const DEFAULT_EVOLINK_FILES_API_URL = "https://files-api.evolink.ai";
@@ -33,10 +33,6 @@ export function getEvolinkFilesApiUrl() {
 }
 
 export function getConfiguredProviderModelId(modelId: DanceModelId) {
-  if (modelId === standardDanceModelId) {
-    return process.env.SEEDANCE_MODEL?.trim() || standardDanceModelId;
-  }
-
   if (modelId === advancedDanceModelId) {
     return process.env.SEEDANCE_ADVANCED_MODEL?.trim() || advancedDanceModelId;
   }

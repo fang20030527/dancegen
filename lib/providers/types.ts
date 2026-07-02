@@ -5,6 +5,7 @@ export type DanceVideoRequest = {
   idempotencyKey: string;
   userId: string;
   uploadObjectKey: string;
+  sourceImageFile?: File;
   templateId: string;
   aspectRatio: AspectRatio;
   modelId: DanceModelId;

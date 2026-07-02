@@ -29,6 +29,7 @@ export type DanceTemplate = {
   risk: DanceTemplateRisk;
   isPublic: boolean;
   durationSeconds: number;
+  videoPath: string;
   providerPayloadVersion: string;
   modelHints: {
     motion: string;

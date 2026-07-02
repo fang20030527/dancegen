@@ -1,7 +1,6 @@
 import { getTemplateById } from "@/lib/dance/templates";
 import { standardDanceModelId } from "@/lib/dance/models";
 import type { DanceGenerationTask } from "@/lib/dance/types";
-import { getConfiguredProviderModelId } from "@/lib/providers/evolink-config";
 import type { DanceVideoRequest, ModelProvider } from "@/lib/providers/types";
 
 const samplePreviewUrl =
@@ -9,7 +8,6 @@ const samplePreviewUrl =
 
 function buildMockTask(request: DanceVideoRequest, status: DanceGenerationTask["status"]): DanceGenerationTask {
   const template = getTemplateById(request.templateId);
-  const providerModel = getConfiguredProviderModelId(request.modelId);
   const now = new Date().toISOString();
 
   return {
@@ -18,8 +16,8 @@ function buildMockTask(request: DanceVideoRequest, status: DanceGenerationTask["
     status,
     templateId: request.templateId,
     aspectRatio: request.aspectRatio,
-    provider: "evolink",
-    model: providerModel,
+    provider: "mock",
+    model: request.modelId,
     providerJobId: `mock_${request.idempotencyKey.slice(-10)}`,
     payloadVersion: template?.providerPayloadVersion ?? "dancegen-seedance-v1",
     costCents: 0,
@@ -33,8 +31,8 @@ function buildMockTask(request: DanceVideoRequest, status: DanceGenerationTask["
 }
 
 export const mockSeedanceProvider: ModelProvider = {
-  name: "evolink",
-  model: getConfiguredProviderModelId(standardDanceModelId),
+  name: "mock",
+  model: standardDanceModelId,
   async submitDanceVideo(request) {
     return buildMockTask(request, "submitted");
   },
@@ -47,8 +45,8 @@ export const mockSeedanceProvider: ModelProvider = {
       status: "succeeded",
       templateId: "hip-hop",
       aspectRatio: "9:16",
-      provider: "evolink",
-      model: getConfiguredProviderModelId(standardDanceModelId),
+      provider: "mock",
+      model: standardDanceModelId,
       providerJobId: `mock_${taskId.slice(-10)}`,
       payloadVersion: "dancegen-seedance-v1",
       costCents: 0,

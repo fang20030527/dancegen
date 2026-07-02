@@ -7,14 +7,14 @@ DanceGen AI is an MVP web framework for a conservative AI dance video generator.
 - Next.js App Router + TypeScript + Tailwind web shell
 - Public pages: `/`, `/ai-dance-generator`, `/ai-twerk-generator`, `/pricing`, `/terms`, `/privacy`, `/refund-policy`, `/payment/success`, `/payment/cancel`
 - Internal scaffold: `/admin`
-- API stubs for Google login gate, upload pre-check, generation submission/status, Creem checkout/webhook, templates, and complaints
-- `ModelProvider` abstraction with a mock Seedance/EvoLink implementation
+- API routes for Google login gate, upload pre-check, generation submission/status, Creem checkout/webhook, templates, and complaints
+- `ModelProvider` abstraction with Viggle as the default public generator and EvoLink Seedance for member generation
 - Conservative template catalog with public low-risk templates and internal-only twerk block
 - Task status machine matching the PRD lifecycle
 
 ## Not Connected Yet
 
-API keys, database persistence, real Google OAuth, real Creem payments, model calls, R2 transfer, and real safety classifiers are intentionally stubbed. Fill `.env.local` from `.env.example` when integrating those services.
+Database persistence, real Google OAuth, real Creem payment settlement, R2 transfer, and real safety classifiers are intentionally stubbed or pending production hardening. Fill `.env.local` from `.env.example` when integrating those services.
 
 ## Commands
 

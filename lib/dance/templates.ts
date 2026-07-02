@@ -10,7 +10,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-2.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "controlled hip-hop groove, no floorwork, no sexualized gestures",
       camera: "static waist-up to full-body crop, stable framing",
@@ -26,7 +27,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-3.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "upbeat K-pop-inspired dance, symmetrical hand moves",
       camera: "portrait crop, subtle push-in, no body distortion",
@@ -42,7 +44,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-4.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "light shuffle footwork, upper body remains natural",
       camera: "full-body framing with minimal camera motion",
@@ -58,7 +61,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-5.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "solo salsa side steps and shoulder rhythm",
       camera: "stable medium shot, clean background motion",
@@ -74,7 +78,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-6.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "robotic arm isolations, controlled torso movement",
       camera: "static portrait crop, no fast zooms",
@@ -90,7 +95,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-7.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "low-impact dance cardio, simple arm swings",
       camera: "full-body or three-quarter crop",
@@ -106,7 +112,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-8.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "casual party dance, hands up, small steps",
       camera: "steady medium crop with upbeat pacing",
@@ -122,7 +129,8 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "low",
     isPublic: true,
     durationSeconds: 5,
-    providerPayloadVersion: "dancegen-seedance-v1",
+    videoPath: "/template-videos/template-7-1.mp4",
+    providerPayloadVersion: "dancegen-viggle-render-v1",
     modelHints: {
       motion: "catwalk step, upright posture, no revealing gestures",
       camera: "portrait crop with clean forward motion",
@@ -138,6 +146,7 @@ export const danceTemplates: DanceTemplate[] = [
     risk: "internal",
     isPublic: false,
     durationSeconds: 5,
+    videoPath: "/template-videos/template-7-1.mp4",
     providerPayloadVersion: "dancegen-seedance-v1",
     modelHints: {
       motion: "internal safety evaluation only",

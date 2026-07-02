@@ -1,18 +1,18 @@
-export const standardDanceModelId = "seedance-1.0-pro-fast";
+export const standardDanceModelId = "viggle-v4-preview";
 export const advancedDanceModelId = "seedance-2.0-mini-reference-to-video";
 
 export const danceModelOptions = [
   {
     id: standardDanceModelId,
-    name: "Seedance 1.0 Pro Fast",
-    description: "Fast preview model for the public generator.",
+    name: "Viggle V4 Preview",
+    description: "Default",
     tier: "standard",
     requiresSourceUpload: false,
   },
   {
     id: advancedDanceModelId,
     name: "Seedance 2.0 Mini Reference",
-    description: "Member model with stronger reference control.",
+    description: "Better",
     tier: "member",
     requiresSourceUpload: true,
   },

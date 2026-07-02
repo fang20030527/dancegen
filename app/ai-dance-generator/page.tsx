@@ -23,7 +23,7 @@ export default async function AiDanceGeneratorPage() {
   return (
     <main>
       <section className="bg-paper py-10 md:py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
           <div className="mb-8 max-w-3xl">
             <h1 className="text-4xl font-black leading-tight tracking-normal text-ink md:text-6xl">
               AI dance generator
