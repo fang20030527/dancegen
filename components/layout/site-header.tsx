@@ -1,22 +1,22 @@
-import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 
+import { BrandLogo } from "@/components/layout/brand-logo";
 import { UserStatusMenu } from "@/components/layout/user-status-menu";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { getHeaderAuthStatus } from "@/lib/auth-status";
-import { userHasActiveCreatorSubscription } from "@/lib/payments/entitlements";
-import { pricingDisplayPlans, pricingPlans } from "@/lib/payments/pricing";
+import { getActiveSubscriptionPlanKey } from "@/lib/payments/entitlements";
+import { getPlanAccountSummary, pricingDisplayPlans, type PricingPlanKey } from "@/lib/payments/pricing";
 
 const navItems = [
   { href: "/ai-dance-generator", label: "Generator" },
   { href: "/pricing", label: "Pricing" },
 ];
 
-function getHeaderPlanStatus(isSignedIn: boolean, hasCreatorMonthlyAccess: boolean) {
+function getHeaderPlanStatus(isSignedIn: boolean, activePlanKey: PricingPlanKey | null) {
   const freePlan = pricingDisplayPlans.find((plan) => plan.key === "free");
-  const creatorPlan = pricingDisplayPlans.find((plan) => plan.key === pricingPlans.creatorMonthly.key);
+  const planSummary = getPlanAccountSummary(activePlanKey);
 
   if (!isSignedIn) {
     return {
@@ -25,11 +25,8 @@ function getHeaderPlanStatus(isSignedIn: boolean, hasCreatorMonthlyAccess: boole
     };
   }
 
-  if (hasCreatorMonthlyAccess) {
-    return {
-      creditsLabel: creatorPlan?.creditsLabel.replace(" / month", "") ?? "320 credits",
-      planLabel: pricingPlans.creatorMonthly.name,
-    };
+  if (planSummary) {
+    return planSummary;
   }
 
   return {
@@ -43,22 +40,13 @@ export async function SiteHeader() {
     headers: await headers(),
   });
   const authStatus = getHeaderAuthStatus(session?.user);
-  const hasCreatorMonthlyAccess = session?.user?.id ? await userHasActiveCreatorSubscription(session.user.id) : false;
-  const planStatus = getHeaderPlanStatus(authStatus.isSignedIn, hasCreatorMonthlyAccess);
+  const activePlanKey = session?.user?.id ? await getActiveSubscriptionPlanKey(session.user.id) : null;
+  const planStatus = getHeaderPlanStatus(authStatus.isSignedIn, activePlanKey);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-ink text-paper backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" aria-label="DanceGen home" className="relative block h-10 w-[158px] overflow-hidden">
-          <Image
-            alt="DanceGen"
-            className="scale-[1.85] object-cover object-center invert"
-            fill
-            priority
-            sizes="158px"
-            src="/DanceGen.svg"
-          />
-        </Link>
+        <BrandLogo priority />
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
           {navItems.map((item) => (
             <Link

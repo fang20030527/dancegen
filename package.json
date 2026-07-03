@@ -1,8 +1,8 @@
 {
-  "name": "dancegen-ai",
+  "name": "danceclip-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "DanceGen AI MVP web framework for single-photo AI dance video generation.",
+  "description": "DanceClip AI web framework for single-photo AI dance video generation.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

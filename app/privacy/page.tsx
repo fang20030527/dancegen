@@ -4,7 +4,7 @@ import { LegalShell } from "@/components/sections/legal-shell";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "DanceGen AI privacy commitments for the MVP.",
+  description: "DanceClip AI privacy commitments.",
 };
 
 export default function PrivacyPage() {
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       </p>
       <h2>Training use</h2>
       <p>
-        DanceGen AI does not use uploaded photos or generated results to train product-side models. Third-party model
+        DanceClip AI does not use uploaded photos or generated results to train product-side models. Third-party model
         provider data retention, training use, human review, and deletion rights must be reviewed before production launch.
       </p>
       <h2>Safety evidence</h2>

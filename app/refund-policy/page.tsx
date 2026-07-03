@@ -4,7 +4,7 @@ import { LegalShell } from "@/components/sections/legal-shell";
 
 export const metadata: Metadata = {
   title: "Refund Policy",
-  description: "DanceGen AI MVP refund and generation return policy.",
+  description: "DanceClip AI refund and generation return policy.",
 };
 
 export default function RefundPolicyPage() {

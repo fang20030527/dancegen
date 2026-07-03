@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file guides coding agents working in the DanceGen AI repository.
+This file guides coding agents working in the DanceClip AI repository.
 
 ## Product Boundary
 
-DanceGen AI is a creator-facing MVP for generating short AI dance videos from one uploaded adult solo photo. The MVP validates generation quality, safety, unit cost, and willingness to pay for HD/no-watermark unlocks.
+DanceClip AI is a creator-facing product for generating short AI dance videos from one uploaded adult solo photo. The product validates generation quality, safety, unit cost, and willingness to pay for HD/no-watermark downloads.
 
 Keep the product narrower than a generic AI SaaS template:
 

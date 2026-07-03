@@ -6,6 +6,22 @@ export const pricingPlans = {
     description: "Unlock HD and remove the watermark for one successful result.",
     entitlements: ["1 successful video unlock", "HD download", "No watermark", "Limited-time download link"],
   },
+  starterMonthly: {
+    key: "starter_monthly",
+    name: "Starter",
+    priceLabel: "$9.99/mo",
+    creditsPerMonth: 120,
+    description: "Monthly credits for occasional AI dance video generation.",
+    entitlements: ["120 credits per month", "Default dance model", "HD downloads", "Failed runs return credits"],
+  },
+  starterAnnual: {
+    key: "starter_annual",
+    name: "Starter Annual",
+    priceLabel: "$95.88/yr",
+    creditsPerMonth: 120,
+    description: "Annual Starter credits billed once per year.",
+    entitlements: ["120 credits per month", "Default dance model", "HD downloads", "Save 20%"],
+  },
   creatorMonthly: {
     key: "creator_monthly",
     name: "Creator",
@@ -20,11 +36,75 @@ export const pricingPlans = {
       "Failed runs return credits",
     ],
   },
+  creatorAnnual: {
+    key: "creator_annual",
+    name: "Creator Annual",
+    priceLabel: "$191.88/yr",
+    creditsPerMonth: 400,
+    description: "Annual Creator credits and advanced model access billed once per year.",
+    entitlements: [
+      "400 credits per month",
+      "HD/no-watermark downloads included",
+      "Advanced dance model",
+      "Priority queue",
+      "Commercial use",
+      "Save 20%",
+    ],
+  },
+  proMonthly: {
+    key: "pro_monthly",
+    name: "Pro",
+    priceLabel: "$49.99/mo",
+    creditsPerMonth: 1200,
+    description: "High-volume credits for frequent publishing and batch testing.",
+    entitlements: ["1,200 credits per month", "Advanced dance model", "Highest queue priority", "1-month credit rollover"],
+  },
+  proAnnual: {
+    key: "pro_annual",
+    name: "Pro Annual",
+    priceLabel: "$479.88/yr",
+    creditsPerMonth: 1200,
+    description: "Annual Pro credits for high-volume publishing billed once per year.",
+    entitlements: ["1,200 credits per month", "Advanced dance model", "Highest queue priority", "Save 20%"],
+  },
 } as const;
 
-export const pricingPlanKeys = [pricingPlans.singleUnlock.key, pricingPlans.creatorMonthly.key] as const;
+export const pricingPlanKeys = [
+  pricingPlans.singleUnlock.key,
+  pricingPlans.starterMonthly.key,
+  pricingPlans.starterAnnual.key,
+  pricingPlans.creatorMonthly.key,
+  pricingPlans.creatorAnnual.key,
+  pricingPlans.proMonthly.key,
+  pricingPlans.proAnnual.key,
+] as const;
 
 export type PricingPlanKey = (typeof pricingPlanKeys)[number];
+
+export const subscriptionPricingPlanKeys = [
+  pricingPlans.starterMonthly.key,
+  pricingPlans.starterAnnual.key,
+  pricingPlans.creatorMonthly.key,
+  pricingPlans.creatorAnnual.key,
+  pricingPlans.proMonthly.key,
+  pricingPlans.proAnnual.key,
+] as const satisfies readonly PricingPlanKey[];
+
+export const advancedModelPricingPlanKeys = [
+  pricingPlans.creatorMonthly.key,
+  pricingPlans.creatorAnnual.key,
+  pricingPlans.proMonthly.key,
+  pricingPlans.proAnnual.key,
+] as const satisfies readonly PricingPlanKey[];
+
+export const subscriptionPlanPriority = [
+  pricingPlans.proAnnual.key,
+  pricingPlans.proMonthly.key,
+  pricingPlans.creatorAnnual.key,
+  pricingPlans.creatorMonthly.key,
+  pricingPlans.starterAnnual.key,
+  pricingPlans.starterMonthly.key,
+] as const satisfies readonly PricingPlanKey[];
 
 export const pricingDisplayPlans = [
   {
@@ -40,7 +120,7 @@ export const pricingDisplayPlans = [
     ctaHref: "/ai-dance-generator",
   },
   {
-    key: "starter_monthly_display",
+    key: pricingPlans.starterMonthly.key,
     name: "Starter",
     priceLabel: "$9.99",
     cadenceLabel: "per month",
@@ -53,8 +133,10 @@ export const pricingDisplayPlans = [
     creditsLabel: "120 credits / month",
     creditsNote: "Enough for light publishing",
     entitlements: ["6 Default videos / month", "HD downloads", "Remove watermark", "Failed runs return credits"],
-    ctaLabel: "Choose Starter",
-    ctaHref: "/ai-dance-generator",
+    ctaLabel: "Choose monthly",
+    annualCtaLabel: "Choose annual",
+    checkoutPriceKey: pricingPlans.starterMonthly.key,
+    annualCheckoutPriceKey: pricingPlans.starterAnnual.key,
   },
   {
     ...pricingPlans.creatorMonthly,
@@ -70,11 +152,13 @@ export const pricingDisplayPlans = [
     creditsNote: "8 Better videos or 20 Default videos",
     badge: "Recommended",
     featured: true,
-    ctaLabel: "Choose Creator",
+    ctaLabel: "Choose monthly",
+    annualCtaLabel: "Choose annual",
     checkoutPriceKey: pricingPlans.creatorMonthly.key,
+    annualCheckoutPriceKey: pricingPlans.creatorAnnual.key,
   },
   {
-    key: "pro_monthly_display",
+    key: pricingPlans.proMonthly.key,
     name: "Pro",
     priceLabel: "$49.99",
     cadenceLabel: "per month",
@@ -87,8 +171,10 @@ export const pricingDisplayPlans = [
     creditsLabel: "1,200 credits / month",
     creditsNote: "Built for frequent output",
     entitlements: ["24 Better videos / month", "Batch generation", "Highest queue priority", "1-month credit rollover"],
-    ctaLabel: "Choose Pro",
-    ctaHref: "/ai-dance-generator",
+    ctaLabel: "Choose monthly",
+    annualCtaLabel: "Choose annual",
+    checkoutPriceKey: pricingPlans.proMonthly.key,
+    annualCheckoutPriceKey: pricingPlans.proAnnual.key,
   },
 ] as const;
 
@@ -98,6 +184,31 @@ export function isPricingPlanKey(value: unknown): value is PricingPlanKey {
 
 export function getPricingPlanByKey(key: PricingPlanKey) {
   return Object.values(pricingPlans).find((plan) => plan.key === key);
+}
+
+export function getPlanAccountSummary(key: PricingPlanKey | null | undefined) {
+  switch (key) {
+    case pricingPlans.starterMonthly.key:
+    case pricingPlans.starterAnnual.key:
+      return {
+        creditsLabel: "120 credits",
+        planLabel: "Starter",
+      };
+    case pricingPlans.creatorMonthly.key:
+    case pricingPlans.creatorAnnual.key:
+      return {
+        creditsLabel: "400 credits",
+        planLabel: "Creator",
+      };
+    case pricingPlans.proMonthly.key:
+    case pricingPlans.proAnnual.key:
+      return {
+        creditsLabel: "1,200 credits",
+        planLabel: "Pro",
+      };
+    default:
+      return null;
+  }
 }
 
 export const starterEntitlements = {

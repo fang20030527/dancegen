@@ -4,7 +4,7 @@ import { PricingCards } from "@/components/sections/pricing-cards";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "DanceGen AI pricing for free trials, monthly credits, annual savings, and creator subscriptions.",
+  description: "DanceClip AI pricing for free trials, monthly credits, annual savings, and creator subscriptions.",
 };
 
 export default function PricingPage() {

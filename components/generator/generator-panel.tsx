@@ -329,14 +329,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
     setError("Generation is still processing. Check the task again in a few minutes.");
   }
 
-  async function startCheckout(priceKey: PricingPlanKey = pricingPlans.singleUnlock.key) {
+  async function startCheckout(priceKey: PricingPlanKey = pricingPlans.creatorMonthly.key) {
     const response = await fetch("/api/payments/creem/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        priceKey,
-        taskId: priceKey === pricingPlans.singleUnlock.key ? task?.id : undefined,
-      }),
+      body: JSON.stringify({ priceKey }),
     });
     const payload = (await response.json().catch(() => null)) as { checkoutUrl?: string; message?: string } | null;
 
@@ -701,14 +698,14 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
               <div>
                 <p className="text-sm font-black text-ink">Preview ready</p>
                 <p className="mt-1 text-sm leading-6 text-ink/62">
-                  Task {task.id} passed output review. HD/no-watermark download uses single-video unlock.
+                  Task {task.id} passed output review. Subscribe to unlock HD/no-watermark downloads.
                 </p>
               </div>
               <Badge>{task.status}</Badge>
             </div>
             <Button className="mt-4 w-full" onClick={() => startCheckout()} type="button" variant="dark">
               <Download aria-hidden="true" size={18} />
-              Unlock HD
+              Subscribe for HD
             </Button>
           </div>
         ) : null}

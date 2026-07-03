@@ -8,8 +8,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "DanceGen AI - AI Dance Video Generator",
-    template: "%s | DanceGen AI",
+    default: "DanceClip AI - AI Dance Video Generator",
+    template: "%s | DanceClip AI",
   },
   description: "Generate short, safe, silent AI dance videos from one adult solo photo.",
   metadataBase: new URL("https://dancegen.ai"),

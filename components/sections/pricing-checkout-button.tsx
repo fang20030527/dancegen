@@ -5,14 +5,16 @@ import { Loader2 } from "lucide-react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import type { PricingPlanKey } from "@/lib/payments/pricing";
+import { cn } from "@/lib/utils";
 
 type PricingCheckoutButtonProps = {
+  className?: string;
   priceKey: PricingPlanKey;
   variant: ButtonProps["variant"];
   label?: string;
 };
 
-export function PricingCheckoutButton({ priceKey, variant, label = "Start" }: PricingCheckoutButtonProps) {
+export function PricingCheckoutButton({ className, priceKey, variant, label = "Start" }: PricingCheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export function PricingCheckoutButton({ priceKey, variant, label = "Start" }: Pr
   }
 
   return (
-    <div className="mt-7">
+    <div className={cn("mt-7", className)}>
       <Button className="w-full" disabled={isLoading} onClick={startCheckout} type="button" variant={variant}>
         {isLoading ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : null}
         {isLoading ? "Opening checkout" : label}

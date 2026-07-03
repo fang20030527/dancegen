@@ -8,7 +8,13 @@ import {
   type CreemCheckoutSession,
   type CreemWebhookEvent,
 } from "@/lib/payments/creem";
-import { pricingPlans, type PricingPlanKey } from "@/lib/payments/pricing";
+import {
+  advancedModelPricingPlanKeys,
+  pricingPlans,
+  subscriptionPlanPriority,
+  subscriptionPricingPlanKeys,
+  type PricingPlanKey,
+} from "@/lib/payments/pricing";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -99,15 +105,40 @@ export async function userHasActiveCreatorSubscription(userId: string) {
       SELECT 1
       FROM payment_entitlements
       WHERE user_id = $1
-        AND plan_key = $2
+        AND plan_key = ANY($2::text[])
         AND status IN ('active', 'trialing', 'scheduled_cancel')
         AND (valid_until IS NULL OR valid_until > now())
       LIMIT 1
     `,
-    [userId, pricingPlans.creatorMonthly.key],
+    [userId, [...advancedModelPricingPlanKeys]],
   );
 
   return Boolean(result.rowCount);
+}
+
+export async function getActiveSubscriptionPlanKey(userId: string): Promise<PricingPlanKey | null> {
+  const database = getPaymentPool();
+
+  if (!database) {
+    return null;
+  }
+
+  await ensurePaymentTables(database);
+
+  const result = await database.query<{ plan_key: PricingPlanKey }>(
+    `
+      SELECT plan_key
+      FROM payment_entitlements
+      WHERE user_id = $1
+        AND plan_key = ANY($2::text[])
+        AND status IN ('active', 'trialing', 'scheduled_cancel')
+        AND (valid_until IS NULL OR valid_until > now())
+    `,
+    [userId, [...subscriptionPricingPlanKeys]],
+  );
+  const activePlanKeys = new Set(result.rows.map((row) => row.plan_key));
+
+  return subscriptionPlanPriority.find((planKey) => activePlanKeys.has(planKey)) ?? null;
 }
 
 export async function applyCreemWebhookEvent(event: CreemWebhookEvent): Promise<ApplyCreemWebhookResult> {
@@ -155,7 +186,7 @@ export async function applyCreemWebhookEvent(event: CreemWebhookEvent): Promise<
         eventId,
         eventType,
         actions: [],
-        message: "Event was recorded but did not match a configured DanceGen product.",
+        message: "Event was recorded but did not match a configured DanceClip AI product.",
       };
     }
 

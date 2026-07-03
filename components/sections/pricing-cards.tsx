@@ -3,16 +3,16 @@ import { Check, CreditCard, Gauge, Rocket, Sparkles, Zap } from "lucide-react";
 
 import { PricingCheckoutButton } from "@/components/sections/pricing-checkout-button";
 import { Button } from "@/components/ui/button";
-import { pricingDisplayPlans } from "@/lib/payments/pricing";
+import { pricingDisplayPlans, type PricingPlanKey } from "@/lib/payments/pricing";
 import { cn } from "@/lib/utils";
 
 type PricingDisplayPlan = (typeof pricingDisplayPlans)[number];
 
 const planIcons: Record<PricingDisplayPlan["key"], LucideIcon> = {
   free: Sparkles,
-  starter_monthly_display: CreditCard,
+  starter_monthly: CreditCard,
   creator_monthly: Zap,
-  pro_monthly_display: Rocket,
+  pro_monthly: Rocket,
 };
 
 export function PricingCards() {
@@ -110,8 +110,23 @@ export function PricingCards() {
 }
 
 function PricingPlanAction({ plan, featured }: { plan: PricingDisplayPlan; featured: boolean }) {
-  if (hasCheckoutPriceKey(plan)) {
-    return <PricingCheckoutButton label={plan.ctaLabel} priceKey={plan.checkoutPriceKey} variant="primary" />;
+  if (hasCheckoutOptions(plan)) {
+    return (
+      <div className="mt-7 grid gap-2">
+        <PricingCheckoutButton
+          className="mt-0"
+          label={plan.ctaLabel}
+          priceKey={plan.checkoutPriceKey}
+          variant={featured ? "primary" : "outline"}
+        />
+        <PricingCheckoutButton
+          className="mt-0"
+          label={`${plan.annualCtaLabel} - save 20%`}
+          priceKey={plan.annualCheckoutPriceKey}
+          variant="dark"
+        />
+      </div>
+    );
   }
 
   if (!hasPlanHref(plan)) {
@@ -135,8 +150,13 @@ function hasBadge(plan: PricingDisplayPlan): plan is PricingDisplayPlan & { badg
   return "badge" in plan;
 }
 
-function hasCheckoutPriceKey(plan: PricingDisplayPlan): plan is Extract<PricingDisplayPlan, { readonly checkoutPriceKey: unknown }> {
-  return "checkoutPriceKey" in plan;
+function hasCheckoutOptions(
+  plan: PricingDisplayPlan,
+): plan is Extract<
+  PricingDisplayPlan,
+  { readonly annualCheckoutPriceKey: PricingPlanKey; readonly annualCtaLabel: string; readonly checkoutPriceKey: PricingPlanKey }
+> {
+  return "checkoutPriceKey" in plan && "annualCheckoutPriceKey" in plan;
 }
 
 function hasYearlyPricing(

@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "crypto";
 
-import { isPricingPlanKey, pricingPlans, type PricingPlanKey } from "@/lib/payments/pricing";
+import { isPricingPlanKey, pricingPlanKeys, pricingPlans, type PricingPlanKey } from "@/lib/payments/pricing";
 
 const CREEM_TEST_API_BASE_URL = "https://test-api.creem.io";
 const CREEM_PRODUCTION_API_BASE_URL = "https://api.creem.io";
@@ -80,15 +80,11 @@ export function getCreemApiKey() {
 }
 
 export function getCreemProductId(priceKey: PricingPlanKey) {
-  const envNameByPriceKey: Record<PricingPlanKey, string> = {
-    [pricingPlans.singleUnlock.key]: "CREEM_SINGLE_UNLOCK_PRICE_ID",
-    [pricingPlans.creatorMonthly.key]: "CREEM_CREATOR_MONTHLY_PRICE_ID",
-  };
-  const envName = envNameByPriceKey[priceKey];
-  const productId = getOptionalCreemEnv(envName) || (priceKey === pricingPlans.singleUnlock.key ? getOptionalCreemEnv("CREEM_PRODUCT_ID") : "");
+  const envNames = creemProductEnvNamesByPriceKey[priceKey];
+  const productId = getFirstOptionalCreemEnv(envNames);
 
   if (!productId) {
-    throw new CreemConfigError(`Missing ${envName} for ${priceKey}. Creem checkout sessions require a product_id.`);
+    throw new CreemConfigError(`Missing ${envNames[0]} for ${priceKey}. Creem checkout sessions require a product_id.`);
   }
 
   return productId;
@@ -99,19 +95,24 @@ export function getPriceKeyForCreemProduct(productId: string | null | undefined)
     return null;
   }
 
-  const singleProductId = getOptionalCreemEnv("CREEM_SINGLE_UNLOCK_PRICE_ID") || getOptionalCreemEnv("CREEM_PRODUCT_ID");
-  const creatorProductId = getOptionalCreemEnv("CREEM_CREATOR_MONTHLY_PRICE_ID");
-
-  if (productId === singleProductId) {
-    return pricingPlans.singleUnlock.key;
-  }
-
-  if (productId === creatorProductId) {
-    return pricingPlans.creatorMonthly.key;
+  for (const priceKey of pricingPlanKeys) {
+    if (getFirstOptionalCreemEnv(creemProductEnvNamesByPriceKey[priceKey]) === productId) {
+      return priceKey;
+    }
   }
 
   return null;
 }
+
+const creemProductEnvNamesByPriceKey: Record<PricingPlanKey, readonly string[]> = {
+  [pricingPlans.singleUnlock.key]: ["CREEM_SINGLE_UNLOCK_PRODUCT_ID", "CREEM_SINGLE_UNLOCK_PRICE_ID"],
+  [pricingPlans.starterMonthly.key]: ["CREEM_STARTER_MONTHLY_PRODUCT_ID"],
+  [pricingPlans.starterAnnual.key]: ["CREEM_STARTER_ANNUAL_PRODUCT_ID"],
+  [pricingPlans.creatorMonthly.key]: ["CREEM_CREATOR_MONTHLY_PRODUCT_ID", "CREEM_CREATOR_MONTHLY_PRICE_ID"],
+  [pricingPlans.creatorAnnual.key]: ["CREEM_CREATOR_ANNUAL_PRODUCT_ID"],
+  [pricingPlans.proMonthly.key]: ["CREEM_PRO_MONTHLY_PRODUCT_ID"],
+  [pricingPlans.proAnnual.key]: ["CREEM_PRO_ANNUAL_PRODUCT_ID"],
+};
 
 export function getAppOrigin(requestUrl?: string) {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || process.env.BETTER_AUTH_URL?.trim();
@@ -268,6 +269,18 @@ function getOptionalCreemEnv(name: string) {
   }
 
   return value;
+}
+
+function getFirstOptionalCreemEnv(names: readonly string[]) {
+  for (const name of names) {
+    const value = getOptionalCreemEnv(name);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
 }
 
 function getString(payload: JsonRecord | null, key: string) {

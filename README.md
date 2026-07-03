@@ -1,6 +1,6 @@
-# DanceGen AI
+# DanceClip AI
 
-DanceGen AI is an MVP web framework for a conservative AI dance video generator. The product flow follows `mvp PRD.md`: upload one clear adult solo photo, choose a low-risk template, generate a 5-second silent watermarked preview, then pay to unlock HD/no-watermark download.
+DanceClip AI is a web framework for a conservative AI dance video generator. The product flow follows `mvp PRD.md`: upload one clear adult solo photo, choose a low-risk template, generate a 5-second silent watermarked preview, then subscribe for HD/no-watermark downloads.
 
 ## Current Scope
 

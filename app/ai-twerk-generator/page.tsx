@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "AI Twerk Generator Waitlist",
-  description: "DanceGen AI keeps twerk generation out of the public MVP while safety testing continues.",
+  description: "DanceClip AI keeps twerk generation out of the public app while safety testing continues.",
 };
 
 export default function AiTwerkGeneratorPage() {
@@ -43,7 +43,7 @@ export default function AiTwerkGeneratorPage() {
             </div>
             <h2 className="mt-8 text-3xl font-black leading-tight">Public access blocked</h2>
             <p className="mt-4 text-sm leading-6 text-paper/64">
-              DanceGen only exposes low-risk templates while the product measures safety, cost, quality, and user satisfaction.
+              DanceClip AI only exposes low-risk templates while the product measures safety, cost, quality, and user satisfaction.
             </p>
             <div className="mt-8 grid gap-3 text-sm font-semibold text-paper/72">
               <div className="rounded-2xl border border-white/10 bg-white/6 p-4">No public twerk template</div>
