@@ -7,6 +7,11 @@ import { absoluteUrl, siteConfig, siteStructuredData } from "@/lib/site";
 
 import "./globals.css";
 
+const plausibleInitScript = `
+window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+plausible.init()
+`;
+
 export const metadata: Metadata = {
   title: {
     default: siteConfig.defaultTitle,
@@ -42,9 +47,21 @@ export const metadata: Metadata = {
   },
 };
 
+function PlausibleAnalytics() {
+  return (
+    <>
+      <script async src="https://plausible.io/js/pa-u00_N-IgtbYe7WYjqHTbR.js" />
+      <script dangerouslySetInnerHTML={{ __html: plausibleInitScript }} />
+    </>
+  );
+}
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        <PlausibleAnalytics />
+      </head>
       <body className="min-h-screen font-sans antialiased">
         <script
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData).replace(/</g, "\\u003c") }}
