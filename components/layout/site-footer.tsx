@@ -5,8 +5,10 @@ import { siteConfig } from "@/lib/site";
 
 const footerLinks = [
   { href: "/terms", label: "Terms" },
+  { href: "/acceptable-use", label: "Acceptable use" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refund-policy", label: "Refunds" },
+  { href: `mailto:${siteConfig.supportEmail}`, label: "Support" },
   { href: `mailto:${siteConfig.abuseEmail}`, label: "Report abuse" },
 ];
 

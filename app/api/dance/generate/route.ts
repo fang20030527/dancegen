@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { danceModelIds, getDanceModelOption, isMemberDanceModel, standardDanceModelId } from "@/lib/dance/models";
+import { defaultMotionTransferPrompt } from "@/lib/dance/prompts";
 import { aspectRatios } from "@/lib/dance/types";
 import { getTemplateById } from "@/lib/dance/templates";
 import { userHasActiveCreatorSubscription } from "@/lib/payments/entitlements";
@@ -11,6 +12,7 @@ import { EvolinkConfigError } from "@/lib/providers/evolink-config";
 import { EvolinkProviderError } from "@/lib/providers/evolink-seedance";
 import { ViggleConfigError } from "@/lib/providers/viggle-config";
 import { ViggleProviderError } from "@/lib/providers/viggle-render";
+import { assertPromptAllowedByCreemModeration, CreemModerationError } from "@/lib/safety/creem-moderation";
 
 const generationSchema = z.object({
   idempotencyKey: z.string().min(12),
@@ -103,6 +105,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await assertPromptAllowedByCreemModeration({
+      externalId: `dancegen:user_${session.user.id}:gen_${payload.data.idempotencyKey}`,
+      prompt: buildGenerationModerationPrompt({
+        aspectRatio: payload.data.aspectRatio,
+        modelId: payload.data.modelId,
+        template,
+      }),
+    });
+
     const provider = getDanceVideoProvider(payload.data.modelId);
     const task = await provider.submitDanceVideo({
       idempotencyKey: payload.data.idempotencyKey,
@@ -116,6 +127,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ task }, { status: 202 });
   } catch (error) {
+    if (error instanceof CreemModerationError) {
+      const isBlocked = error.kind === "blocked";
+
+      return NextResponse.json(
+        {
+          code: isBlocked ? "GENERATION_BLOCKED_BY_MODERATION" : "GENERATION_MODERATION_UNAVAILABLE",
+          message: isBlocked
+            ? "This generation request could not be processed because it does not meet our content policy."
+            : "Safety screening is temporarily unavailable. Please try again in a moment.",
+        },
+        { status: isBlocked ? 403 : 503 },
+      );
+    }
+
     const status = isProviderConfigError(error) ? 503 : 502;
     const message =
       isKnownProviderError(error)
@@ -182,4 +207,26 @@ function isKnownProviderError(error: unknown): error is Error {
     error instanceof ViggleConfigError ||
     error instanceof ViggleProviderError
   );
+}
+
+function buildGenerationModerationPrompt({
+  aspectRatio,
+  modelId,
+  template,
+}: {
+  aspectRatio: string;
+  modelId: string;
+  template: NonNullable<ReturnType<typeof getTemplateById>>;
+}) {
+  return [
+    "DanceClip AI photo-to-dance video generation request.",
+    "User-supplied free-text prompt: none.",
+    `Backend model instruction: ${defaultMotionTransferPrompt}`,
+    `Template: ${template.name}. ${template.description}`,
+    `Template motion hint: ${template.modelHints.motion}`,
+    `Template camera hint: ${template.modelHints.camera}`,
+    `Template safety hint: ${template.modelHints.safety}`,
+    `Model: ${modelId}. Aspect ratio: ${aspectRatio}.`,
+    "Only authorized adult solo source photos are allowed. Do not generate explicit, sexually suggestive, non-consensual, minor, impersonation, face-swap, deepfake, hateful, violent, illegal, or safety-bypass content.",
+  ].join("\n");
 }

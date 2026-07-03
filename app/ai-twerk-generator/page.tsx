@@ -6,17 +6,15 @@ import { Button } from "@/components/ui/button";
 import { createPageMetadata, siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "AI Twerk Generator Waitlist",
+  title: "Restricted Template Notice",
   description:
-    "Join the AI twerk generator waitlist for future access while public release remains blocked during safety, consent, and quality testing.",
+    "This restricted DanceClip AI template route is not available in the public product while safety, consent, and quality controls are enforced.",
   path: "/ai-twerk-generator",
-  keywords: [
-    "AI twerk generator waitlist",
-    "AI twerk generator",
-    "twerk generation waitlist",
-    "AI dance generator",
-    "safe AI dance video generator",
-  ],
+  keywords: ["AI dance safety notice", "restricted AI dance template", "safe AI dance video generator"],
+  robots: {
+    follow: false,
+    index: false,
+  },
 });
 
 export default function AiTwerkGeneratorPage() {
@@ -29,11 +27,11 @@ export default function AiTwerkGeneratorPage() {
             Internal testing only
           </div>
           <h1 className="text-5xl font-black leading-tight tracking-normal text-ink md:text-6xl">
-            AI Twerk Generator Waitlist
+            Restricted template notice
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-ink/64">
-            Public twerk generation is not available in this MVP. This waitlist page validates search demand while the
-            template remains blocked for safety, consent, and quality review.
+            This route is not available in the public product. DanceClip AI exposes only conservative adult solo dance
+            templates that meet safety, consent, and quality requirements.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild>
@@ -42,7 +40,7 @@ export default function AiTwerkGeneratorPage() {
             <Button asChild variant="outline">
               <a href={`mailto:${siteConfig.waitlistEmail}`}>
                 <Mail aria-hidden="true" size={18} />
-                Join waitlist
+                Contact team
               </a>
             </Button>
           </div>
@@ -57,7 +55,7 @@ export default function AiTwerkGeneratorPage() {
               DanceClip AI only exposes low-risk templates while the product measures safety, cost, quality, and user satisfaction.
             </p>
             <div className="mt-8 grid gap-3 text-sm font-semibold text-paper/72">
-              <div className="rounded-2xl border border-white/10 bg-white/6 p-4">No public twerk template</div>
+              <div className="rounded-2xl border border-white/10 bg-white/6 p-4">No public restricted template</div>
               <div className="rounded-2xl border border-white/10 bg-white/6 p-4">No explicit samples</div>
               <div className="rounded-2xl border border-white/10 bg-white/6 p-4">No free prompt generation</div>
             </div>

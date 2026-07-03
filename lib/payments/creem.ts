@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "crypto";
 
-import { isPricingPlanKey, pricingPlanKeys, pricingPlans, type PricingPlanKey } from "@/lib/payments/pricing";
+import { isPricingPlanKey, pricingPlanKeys, pricingPlans, type PricingPlanKey } from "./pricing";
 
 const CREEM_TEST_API_BASE_URL = "https://test-api.creem.io";
 const CREEM_PRODUCTION_API_BASE_URL = "https://api.creem.io";

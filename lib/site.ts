@@ -7,6 +7,7 @@ export const siteConfig = {
   name: "DanceClip AI",
   url: siteUrl,
   abuseEmail: "abuse@danceclip.org",
+  supportEmail: "support@danceclip.org",
   waitlistEmail: "waitlist@danceclip.org",
   defaultTitle: "Free AI Dance Video Generator from Photo | DanceClip AI",
   description:
@@ -37,9 +38,9 @@ type PageMetadataInput = {
 export const sitemapRoutes = [
   "/",
   "/ai-dance-generator",
-  "/ai-twerk-generator",
   "/pricing",
   "/terms",
+  "/acceptable-use",
   "/privacy",
   "/refund-policy",
 ] as const;
@@ -114,6 +115,11 @@ export const siteStructuredData = {
           "@type": "ContactPoint",
           contactType: "abuse reports and deletion requests",
           email: siteConfig.abuseEmail,
+        },
+        {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: siteConfig.supportEmail,
         },
       ],
     },
