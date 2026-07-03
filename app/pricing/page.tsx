@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { PricingCards } from "@/components/sections/pricing-cards";
+import { createPageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Pricing",
-  description: "DanceClip AI pricing for free trials, monthly credits, annual savings, and creator subscriptions.",
-};
+  description:
+    "Compare DanceClip AI pricing for free trials, monthly credits, annual savings, HD downloads, watermark removal, priority queues, and creator subscriptions.",
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return (

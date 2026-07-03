@@ -1,12 +1,13 @@
 import Link from "next/link";
 
 import { BrandLogo } from "@/components/layout/brand-logo";
+import { siteConfig } from "@/lib/site";
 
 const footerLinks = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refund-policy", label: "Refunds" },
-  { href: "mailto:abuse@dancegen.ai", label: "Report abuse" },
+  { href: `mailto:${siteConfig.abuseEmail}`, label: "Report abuse" },
 ];
 
 export function SiteFooter() {
@@ -17,12 +18,13 @@ export function SiteFooter() {
           <BrandLogo size="footer" />
           <div className="max-w-3xl">
             <h2 className="text-3xl font-black leading-tight tracking-normal text-paper sm:text-4xl">
-              AI dance videos from one photo.
+              Photo to AI dance video generator.
             </h2>
             <p className="mt-4 text-base leading-7 text-paper/70 sm:text-lg">
-              DanceClip AI helps creators turn a single source photo into short 9:16 AI dance clips for TikTok,
+              DanceClip AI helps creators turn a single adult solo photo into short 9:16 AI dance clips for TikTok,
               Reels, and Shorts. Upload a clear solo photo, choose a template, and generate a silent preview
-              in seconds.
+              in seconds. The public workflow focuses on authorized adult solo photos, conservative motion templates,
+              watermark previews, and credit returns when a model run fails or is safety-blocked.
             </p>
           </div>
         </div>

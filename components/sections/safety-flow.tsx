@@ -30,10 +30,11 @@ export function SafetyFlow() {
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
             <h2 className="text-4xl font-black leading-tight tracking-normal md:text-5xl">
-              Make dance videos people want to share.
+              Make photo dance videos people want to share.
             </h2>
             <p className="mt-4 text-base leading-7 text-paper/64">
-              Start with one photo, choose a viral dance template, and generate a short video built for social feeds.
+              Start with one adult solo photo, choose a viral dance template, and generate a short AI dance video built
+              for social feeds.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

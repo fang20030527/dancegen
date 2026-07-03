@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { siteConfig } from "@/lib/site";
+
 type LegalShellProps = {
   title: string;
   description: string;
@@ -17,7 +19,7 @@ export function LegalShell({ title, description, children }: LegalShellProps) {
         <h2>Complaints and deletion</h2>
         <p>
           To report misuse, request deletion, or freeze a download, email{" "}
-          <a href="mailto:abuse@dancegen.ai">abuse@dancegen.ai</a> with the result URL or task ID. Reported downloads
+          <a href={`mailto:${siteConfig.abuseEmail}`}>{siteConfig.abuseEmail}</a> with the result URL or task ID. Reported downloads
           should be frozen before manual review in production.
         </p>
       </article>

@@ -15,12 +15,20 @@ const planIcons: Record<PricingDisplayPlan["key"], LucideIcon> = {
   pro_monthly: Rocket,
 };
 
-export function PricingCards() {
+type PricingCardsProps = {
+  headingLevel?: "h1" | "h2";
+};
+
+export function PricingCards({ headingLevel = "h1" }: PricingCardsProps) {
+  const Heading = headingLevel;
+
   return (
     <section className="bg-paper py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-black leading-tight tracking-normal text-ink md:text-6xl">Plans for every dance workflow.</h1>
+          <Heading className="text-4xl font-black leading-tight tracking-normal text-ink md:text-6xl">
+            Plans for every dance workflow.
+          </Heading>
           <p className="mt-4 text-base leading-7 text-ink/62">
             Start free, then pick monthly or annual credits that match how often you publish. Annual plans save 20% while credits still refresh monthly.
           </p>

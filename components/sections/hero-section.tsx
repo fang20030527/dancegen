@@ -79,8 +79,8 @@ export function HeroSection() {
             Video Generator
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-ink/68 md:text-lg">
-            Upload one photo, choose a viral dance template, and instantly create a dance clip for TikTok, Reels, and
-            Shorts.
+            Make a photo dance online: upload one adult solo photo, choose a viral dance template, and create a short
+            AI dance clip for TikTok, Reels, and Shorts with an AI dance maker online.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild>

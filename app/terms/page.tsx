@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { LegalShell } from "@/components/sections/legal-shell";
+import { createPageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Terms of Service",
-  description: "DanceClip AI terms for safe AI dance video generation.",
-};
+  description:
+    "Read the DanceClip AI terms for authorized adult solo photos, safe AI dance video generation, blocked content, generated outputs, and abuse enforcement.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

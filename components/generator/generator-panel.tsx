@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- Blob preview URLs are user-selected local files, not remote optimized assets. */
 
 import { ChangeEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   CheckCircle2,
   ChevronRight,
@@ -434,10 +435,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
                             onClick={() => handleReferenceImageSelect(referenceImage)}
                             type="button"
                           >
-                            <img
+                            <Image
                               alt={referenceImage.label}
                               className="h-full w-full object-cover"
-                              loading="lazy"
+                              fill
+                              sizes="(min-width: 1024px) 88px, 22vw"
                               src={referenceImage.src}
                             />
                             {isLoading ? (

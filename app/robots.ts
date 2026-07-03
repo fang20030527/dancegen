@@ -1,14 +1,16 @@
 import type { MetadataRoute } from "next";
 
+import { absoluteUrl, sitemapRoutes } from "@/lib/site";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/ai-dance-generator", "/ai-twerk-generator", "/pricing", "/terms", "/privacy", "/refund-policy"],
+        allow: [...sitemapRoutes],
         disallow: ["/admin", "/api"],
       },
     ],
-    sitemap: "https://dancegen.ai/sitemap.xml",
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

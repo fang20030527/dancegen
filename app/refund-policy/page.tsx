@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { LegalShell } from "@/components/sections/legal-shell";
+import { createPageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Refund Policy",
-  description: "DanceClip AI refund and generation return policy.",
-};
+  description:
+    "Understand DanceClip AI refund rules for generation failures, safety blocks, paid HD unlocks, payment reconciliation, abuse, and chargeback handling.",
+  path: "/refund-policy",
+});
 
 export default function RefundPolicyPage() {
   return (

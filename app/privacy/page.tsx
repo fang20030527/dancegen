@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { LegalShell } from "@/components/sections/legal-shell";
+import { createPageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Privacy Policy",
-  description: "DanceClip AI privacy commitments.",
-};
+  description:
+    "Review how DanceClip AI handles uploaded photos, generated dance previews, media retention, training use, safety evidence, deletion requests, and abuse reports.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

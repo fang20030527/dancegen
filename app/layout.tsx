@@ -3,22 +3,53 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { absoluteUrl, siteConfig, siteStructuredData } from "@/lib/site";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "DanceClip AI - AI Dance Video Generator",
-    template: "%s | DanceClip AI",
+    default: siteConfig.defaultTitle,
+    template: `%s | ${siteConfig.name}`,
   },
-  description: "Generate short, safe, silent AI dance videos from one adult solo photo.",
-  metadataBase: new URL("https://dancegen.ai"),
+  description: siteConfig.description,
+  keywords: [...siteConfig.defaultKeywords],
+  metadataBase: new URL(siteConfig.url),
+  alternates: {
+    canonical: siteConfig.url,
+  },
+  openGraph: {
+    title: siteConfig.defaultTitle,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl(siteConfig.ogImagePath),
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} AI dance video generator`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.defaultTitle,
+    description: siteConfig.description,
+    images: [absoluteUrl(siteConfig.ogImagePath)],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body className="min-h-screen font-sans antialiased">
+        <script
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData).replace(/</g, "\\u003c") }}
+          type="application/ld+json"
+        />
         <SiteHeader />
         {children}
         <SiteFooter />

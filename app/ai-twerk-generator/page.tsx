@@ -3,11 +3,21 @@ import Link from "next/link";
 import { Lock, Mail, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { createPageMetadata, siteConfig } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "AI Twerk Generator Waitlist",
-  description: "DanceClip AI keeps twerk generation out of the public app while safety testing continues.",
-};
+  description:
+    "Join the AI twerk generator waitlist for future access while public release remains blocked during safety, consent, and quality testing.",
+  path: "/ai-twerk-generator",
+  keywords: [
+    "AI twerk generator waitlist",
+    "AI twerk generator",
+    "twerk generation waitlist",
+    "AI dance generator",
+    "safe AI dance video generator",
+  ],
+});
 
 export default function AiTwerkGeneratorPage() {
   return (
@@ -19,17 +29,18 @@ export default function AiTwerkGeneratorPage() {
             Internal testing only
           </div>
           <h1 className="text-5xl font-black leading-tight tracking-normal text-ink md:text-6xl">
-            Twerk generation is not public in this MVP.
+            AI Twerk Generator Waitlist
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-ink/64">
-            This page validates search demand while the template remains blocked from public generation and safety review.
+            Public twerk generation is not available in this MVP. This waitlist page validates search demand while the
+            template remains blocked for safety, consent, and quality review.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild>
               <Link href="/ai-dance-generator">Use dance generator</Link>
             </Button>
             <Button asChild variant="outline">
-              <a href="mailto:waitlist@dancegen.ai">
+              <a href={`mailto:${siteConfig.waitlistEmail}`}>
                 <Mail aria-hidden="true" size={18} />
                 Join waitlist
               </a>
