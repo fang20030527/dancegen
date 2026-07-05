@@ -13,6 +13,14 @@ window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push
 plausible.init()
 `;
 
+const microsoftClarityInitScript = `
+(function(c,l,a,r,i,t,y){
+  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", "xhl0ulxzus");
+`;
+
 export const metadata: Metadata = {
   title: {
     default: siteConfig.defaultTitle,
@@ -57,11 +65,16 @@ function PlausibleAnalytics() {
   );
 }
 
+function MicrosoftClarityAnalytics() {
+  return <script dangerouslySetInnerHTML={{ __html: microsoftClarityInitScript }} />;
+}
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <head>
         <PlausibleAnalytics />
+        <MicrosoftClarityAnalytics />
       </head>
       <body className="min-h-screen font-sans antialiased">
         <script
