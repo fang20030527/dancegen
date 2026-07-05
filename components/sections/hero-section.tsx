@@ -7,8 +7,18 @@ import { GPTImageGenerationLoader } from "@/components/ui/gpt-image-generation-l
 import { cn } from "@/lib/utils";
 
 const heroVideos = [
-  { className: "mt-16", cornerImage: "/hero-images/source-cat.png", src: "/hero-videos/hero-dance-cat.mp4" },
-  { className: "-mt-16", cornerImage: "/hero-images/source-female.png", src: "/hero-videos/hero-dance-2.mp4" },
+  {
+    className: "mt-16",
+    cornerImage: "/hero-images/source-cat.png",
+    poster: "/hero-images/hero-dance-cat-poster.jpg",
+    src: "/hero-videos/hero-dance-cat.mp4",
+  },
+  {
+    className: "-mt-16",
+    cornerImage: "/hero-images/source-female.png",
+    poster: "/hero-images/hero-dance-2-poster.jpg",
+    src: "/hero-videos/hero-dance-2.mp4",
+  },
 ];
 
 function HeroSourceTile({ src }: { src: string }) {
@@ -19,15 +29,34 @@ function HeroSourceTile({ src }: { src: string }) {
   );
 }
 
-function HeroVideoCard({ className, cornerImage, src }: { className?: string; cornerImage: string; src: string }) {
+function HeroVideoCard({
+  className,
+  cornerImage,
+  poster,
+  src,
+}: {
+  className?: string;
+  cornerImage: string;
+  poster: string;
+  src: string;
+}) {
   return (
     <div
       className={cn(
-        "relative aspect-[9/16] w-[clamp(220px,16vw,282px)] overflow-hidden rounded-[40px] border border-ink/12 bg-white/92 shadow-[0_24px_70px_rgba(9,9,7,0.18)]",
+        "relative aspect-[9/16] w-[clamp(220px,16vw,282px)] overflow-hidden rounded-[40px] border border-ink/12 bg-white/[.92] shadow-[0_24px_70px_rgba(9,9,7,0.18)]",
         className,
       )}
     >
-      <video autoPlay className="h-full w-full object-cover" loop muted playsInline preload="metadata" src={src} />
+      <video
+        autoPlay
+        className="h-full w-full object-cover"
+        loop
+        muted
+        playsInline
+        poster={poster}
+        preload="auto"
+        src={src}
+      />
       <HeroSourceTile src={cornerImage} />
     </div>
   );
@@ -40,7 +69,13 @@ function HeroVideoFrames() {
       className="absolute right-[1vw] top-1/2 z-10 hidden -translate-y-1/2 items-center gap-5 lg:flex xl:right-[3vw]"
     >
       {heroVideos.map((video) => (
-        <HeroVideoCard className={video.className} cornerImage={video.cornerImage} key={video.src} src={video.src} />
+        <HeroVideoCard
+          className={video.className}
+          cornerImage={video.cornerImage}
+          key={video.src}
+          poster={video.poster}
+          src={video.src}
+        />
       ))}
     </div>
   );

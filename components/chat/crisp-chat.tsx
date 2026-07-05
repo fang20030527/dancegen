@@ -9,9 +9,11 @@ type CrispChatProps = {
   websiteId?: string;
 };
 
+type CrispCommand = ["safe", boolean] | ["config", string, unknown] | ["do", string];
+
 declare global {
   interface Window {
-    $crisp?: unknown[];
+    $crisp?: CrispCommand[];
     CRISP_WEBSITE_ID?: string;
   }
 }
@@ -34,6 +36,9 @@ export function CrispChat({ websiteId }: CrispChatProps) {
 function configureCrisp(websiteId: string) {
   window.$crisp = window.$crisp || [];
   window.CRISP_WEBSITE_ID = websiteId;
+  window.$crisp.push(["safe", true]);
+  window.$crisp.push(["config", "container:index", [2147483647]]);
+  window.$crisp.push(["do", "chat:show"]);
 }
 
 function injectCrispScript() {
