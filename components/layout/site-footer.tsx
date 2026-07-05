@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/layout/brand-logo";
 import { siteConfig } from "@/lib/site";
 
 const footerLinks = [
+  { href: "/contact", label: "Contact" },
   { href: "/terms", label: "Terms" },
   { href: "/acceptable-use", label: "Acceptable use" },
   { href: "/privacy", label: "Privacy" },

@@ -50,7 +50,9 @@ export function copySetCookieHeaders(targetHeaders: Headers, sourceHeaders: Head
   const cookie = sourceHeaders.get("set-cookie");
 
   if (cookie) {
-    targetHeaders.append("set-cookie", cookie);
+    splitSetCookieHeader(cookie).forEach((cookieHeader) => {
+      targetHeaders.append("set-cookie", cookieHeader);
+    });
   }
 }
 
@@ -66,4 +68,53 @@ function normalizeSameOriginPath(rawPathOrUrl: string, origin: string, fallbackP
   } catch {
     return fallbackPath;
   }
+}
+
+function splitSetCookieHeader(setCookieHeader: string) {
+  const cookies: string[] = [];
+  let cookieStart = 0;
+  let index = 0;
+
+  while (index < setCookieHeader.length) {
+    if (setCookieHeader[index] === ",") {
+      let nextTokenStart = index + 1;
+
+      while (setCookieHeader[nextTokenStart] === " ") {
+        nextTokenStart += 1;
+      }
+
+      let nextSeparator = nextTokenStart;
+
+      while (
+        nextSeparator < setCookieHeader.length &&
+        setCookieHeader[nextSeparator] !== "=" &&
+        setCookieHeader[nextSeparator] !== ";" &&
+        setCookieHeader[nextSeparator] !== ","
+      ) {
+        nextSeparator += 1;
+      }
+
+      if (setCookieHeader[nextSeparator] === "=") {
+        const cookie = setCookieHeader.slice(cookieStart, index).trim();
+
+        if (cookie) {
+          cookies.push(cookie);
+        }
+
+        cookieStart = nextTokenStart;
+        index = nextTokenStart;
+        continue;
+      }
+    }
+
+    index += 1;
+  }
+
+  const finalCookie = setCookieHeader.slice(cookieStart).trim();
+
+  if (finalCookie) {
+    cookies.push(finalCookie);
+  }
+
+  return cookies;
 }

@@ -12,6 +12,7 @@ import { getPlanAccountSummary, pricingDisplayPlans, type PricingPlanKey } from 
 const navItems = [
   { href: "/ai-dance-generator", label: "Generator" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/contact", label: "Contact" },
 ];
 
 function getHeaderPlanStatus(isSignedIn: boolean, activePlanKey: PricingPlanKey | null) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { CrispChat } from "@/components/chat/crisp-chat";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { absoluteUrl, siteConfig, siteStructuredData } from "@/lib/site";
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <SiteHeader />
         {children}
         <SiteFooter />
+        <CrispChat websiteId={process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID} />
       </body>
     </html>
   );

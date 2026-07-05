@@ -2,13 +2,15 @@ import type { Metadata, MetadataRoute } from "next";
 
 const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.danceclip.org";
 const siteUrl = rawSiteUrl.replace(/\/+$/, "");
+const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "feedback@danceclip.org.com";
 
 export const siteConfig = {
   name: "DanceClip AI",
   url: siteUrl,
-  abuseEmail: "abuse@danceclip.org",
-  supportEmail: "support@danceclip.org",
-  waitlistEmail: "waitlist@danceclip.org",
+  abuseEmail: process.env.ABUSE_CONTACT_EMAIL || "abuse@danceclip.org",
+  contactEmail,
+  supportEmail: contactEmail,
+  waitlistEmail: process.env.WAITLIST_EMAIL || "waitlist@danceclip.org",
   defaultTitle: "Free AI Dance Video Generator from Photo | DanceClip AI",
   description:
     "Turn one adult solo photo into a short AI dance video. Use DanceClip AI as a safe photo to dance video generator for TikTok, Reels, and Shorts.",
@@ -39,6 +41,7 @@ export const sitemapRoutes = [
   "/",
   "/ai-dance-generator",
   "/pricing",
+  "/contact",
   "/terms",
   "/acceptable-use",
   "/privacy",
@@ -119,7 +122,7 @@ export const siteStructuredData = {
         {
           "@type": "ContactPoint",
           contactType: "customer support",
-          email: siteConfig.supportEmail,
+          email: siteConfig.contactEmail,
         },
       ],
     },
