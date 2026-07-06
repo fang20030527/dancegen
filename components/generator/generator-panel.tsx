@@ -273,7 +273,7 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
     });
 
     if (response.status === 401) {
-      window.location.assign("/api/auth/google?redirectTo=/ai-dance-generator");
+      window.location.assign("/register?redirectTo=/ai-dance-generator");
       return;
     }
 

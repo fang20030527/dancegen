@@ -69,8 +69,7 @@ export async function SiteHeader() {
           />
           {authStatus.isSignedIn ? null : (
             <Button asChild size="sm">
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- OAuth endpoints need document navigation, not App Router navigation. */}
-              <a href="/api/auth/google?redirectTo=/ai-dance-generator">Sign in</a>
+              <a href="/register?redirectTo=/ai-dance-generator">Sign in</a>
             </Button>
           )}
         </div>

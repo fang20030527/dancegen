@@ -15,7 +15,7 @@ type UserStatusMenuProps = {
   statusLabel: "Signed in" | "Signed out";
 };
 
-const googleSignInHref = "/api/auth/google?redirectTo=/ai-dance-generator";
+const googleSignInHref = "/register?redirectTo=/ai-dance-generator";
 
 export function UserStatusMenu({
   accountLabel,

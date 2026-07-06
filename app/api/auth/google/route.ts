@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import {
@@ -7,10 +7,19 @@ import {
   getOAuthProviderRedirectUrl,
   getSafeAuthCallbackPath,
 } from "@/lib/auth-oauth";
+import {
+  getTurnstileRegisterCookieOptions,
+  turnstileRegisterCookieName,
+} from "@/lib/turnstile";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const callbackURL = getSafeAuthCallbackPath(url);
+
+  if (!request.cookies.has(turnstileRegisterCookieName)) {
+    return redirectToRegister(request.url, callbackURL);
+  }
+
   const signInRequest = createGoogleOAuthSignInRequest(request, callbackURL);
   const authResponse = await auth.handler(signInRequest);
   const providerRedirectUrl = await getOAuthProviderRedirectUrl(authResponse);
@@ -33,7 +42,16 @@ export async function GET(request: Request) {
     path: "/",
     maxAge: 0,
   });
+  response.cookies.set(turnstileRegisterCookieName, "", getTurnstileRegisterCookieOptions(0));
   copySetCookieHeaders(response.headers, authResponse.headers);
 
   return response;
+}
+
+function redirectToRegister(requestUrl: string, redirectTo: string) {
+  const registerUrl = new URL("/register", requestUrl);
+  registerUrl.searchParams.set("redirectTo", redirectTo);
+  registerUrl.searchParams.set("error", "turnstile_required");
+
+  return NextResponse.redirect(registerUrl);
 }

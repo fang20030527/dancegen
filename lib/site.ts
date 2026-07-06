@@ -41,6 +41,7 @@ export const sitemapRoutes = [
   "/",
   "/ai-dance-generator",
   "/pricing",
+  "/register",
   "/contact",
   "/terms",
   "/acceptable-use",
