@@ -69,12 +69,23 @@ function MicrosoftClarityAnalytics() {
   return <script dangerouslySetInnerHTML={{ __html: microsoftClarityInitScript }} />;
 }
 
+function GoogleAdsenseScript() {
+  return (
+    <script
+      async
+      crossOrigin="anonymous"
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7093360885280732"
+    />
+  );
+}
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <head>
         <PlausibleAnalytics />
         <MicrosoftClarityAnalytics />
+        <GoogleAdsenseScript />
       </head>
       <body className="min-h-screen font-sans antialiased">
         <script
