@@ -21,6 +21,14 @@ const microsoftClarityInitScript = `
 })(window, document, "clarity", "script", "xhl0ulxzus");
 `;
 
+const googleAnalyticsInitScript = `
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-1ZS7V5KQRZ');
+`;
+
 export const metadata: Metadata = {
   title: {
     default: siteConfig.defaultTitle,
@@ -69,6 +77,15 @@ function MicrosoftClarityAnalytics() {
   return <script dangerouslySetInnerHTML={{ __html: microsoftClarityInitScript }} />;
 }
 
+function GoogleAnalytics() {
+  return (
+    <>
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-1ZS7V5KQRZ" />
+      <script dangerouslySetInnerHTML={{ __html: googleAnalyticsInitScript }} />
+    </>
+  );
+}
+
 function GoogleAdsenseScript() {
   return (
     <script
@@ -83,6 +100,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en">
       <head>
+        <GoogleAnalytics />
         <PlausibleAnalytics />
         <MicrosoftClarityAnalytics />
         <GoogleAdsenseScript />

@@ -41,7 +41,6 @@ export const sitemapRoutes = [
   "/",
   "/ai-dance-generator",
   "/pricing",
-  "/register",
   "/contact",
   "/terms",
   "/acceptable-use",
@@ -101,7 +100,6 @@ export function createPageMetadata({
 export function createSitemapEntry(path: (typeof sitemapRoutes)[number]): MetadataRoute.Sitemap[number] {
   return {
     url: absoluteUrl(path),
-    lastModified: new Date(),
   };
 }
 
