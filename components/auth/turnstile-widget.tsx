@@ -8,6 +8,7 @@ const turnstileScriptId = "cloudflare-turnstile-script";
 const turnstileScriptSrc = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 type TurnstileWidgetProps = {
+  disabled?: boolean;
   siteKey: string;
   onTokenChange: (token: string) => void;
 };
@@ -30,7 +31,7 @@ declare global {
   }
 }
 
-export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps) {
+export function TurnstileWidget({ disabled = false, siteKey, onTokenChange }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [token, setToken] = useState("");
@@ -83,7 +84,10 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
   }, [onTokenChange, siteKey]);
 
   return (
-    <div className="grid gap-3">
+    <div
+      aria-disabled={disabled}
+      className={disabled ? "pointer-events-none grid gap-3 opacity-60" : "grid gap-3"}
+    >
       <div className="min-h-[74px]" ref={containerRef} />
       <input name={turnstileResponseFieldName} readOnly type="hidden" value={token} />
       {loadError ? (

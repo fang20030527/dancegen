@@ -1,5 +1,7 @@
 import type { DanceTemplate } from "@/lib/dance/types";
 
+import { TemplateSelectionLink } from "./template-selection-link";
+
 type TemplateGridProps = {
   templates: DanceTemplate[];
 };
@@ -33,19 +35,22 @@ export function TemplateGrid({ templates }: TemplateGridProps) {
             const showcaseVideoPath = showcaseVideoPathsByTemplateId[template.id] ?? template.videoPath;
 
             return (
-              <article
-                aria-label={`${template.name} preview`}
-                className="relative aspect-[9/16] overflow-hidden rounded-[32px] border border-ink/10 bg-ink shadow-sm"
+              <TemplateSelectionLink
+                ariaLabel={`Try the ${template.name} template`}
+                className="block rounded-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cobalt"
+                href={`/ai-dance-generator?template=${encodeURIComponent(template.id)}#generator`}
                 key={template.id}
               >
-                <video autoPlay className="h-full w-full object-cover" loop muted playsInline preload="metadata" src={showcaseVideoPath} />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 flex h-[clamp(40px,4vw,56px)] items-center justify-center bg-acid text-sm font-black text-ink"
+                <article
+                  aria-label={`${template.name} preview`}
+                  className="relative aspect-[9/16] overflow-hidden rounded-[32px] border border-ink/10 bg-ink shadow-sm"
                 >
-                  TRY NOW
-                </div>
-              </article>
+                  <video autoPlay className="pointer-events-none h-full w-full object-cover" loop muted playsInline preload="metadata" src={showcaseVideoPath} />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[clamp(40px,4vw,56px)] items-center justify-center bg-acid text-sm font-black text-ink">
+                    TRY NOW
+                  </div>
+                </article>
+              </TemplateSelectionLink>
             );
           })}
         </div>

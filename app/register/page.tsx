@@ -22,6 +22,8 @@ const registerErrorMessages: Record<string, string> = {
   turnstile_failed: "Human verification failed. Please try again.",
   turnstile_not_configured: "Human verification is not configured yet.",
   turnstile_required: "Complete the human verification before continuing with Google.",
+  turnstile_expired: "Human verification expired or was already used. Complete the check again.",
+  turnstile_unavailable: "Human verification is temporarily unavailable. Please try again.",
 };
 
 export default async function RegisterPage({ searchParams }: RegisterPageProps) {

@@ -5,6 +5,7 @@ import { GeneratorPanel } from "@/components/generator/generator-panel";
 import { SafetyFlow } from "@/components/sections/safety-flow";
 import { TemplateGrid } from "@/components/sections/template-grid";
 import { auth } from "@/lib/auth";
+import { getInitialTemplateId } from "@/lib/dance/template-selection";
 import { getPublicDanceTemplates } from "@/lib/dance/templates";
 import { userHasActiveCreatorSubscription } from "@/lib/payments/entitlements";
 import { createPageMetadata } from "@/lib/site";
@@ -26,8 +27,14 @@ export const metadata: Metadata = createPageMetadata({
   ],
 });
 
-export default async function AiDanceGeneratorPage() {
+type AiDanceGeneratorPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function AiDanceGeneratorPage({ searchParams }: AiDanceGeneratorPageProps) {
   const templates = getPublicDanceTemplates();
+  const params = await searchParams;
+  const initialTemplateId = getInitialTemplateId(params.template, templates);
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -47,7 +54,14 @@ export default async function AiDanceGeneratorPage() {
               safe preview generation.
             </p>
           </div>
-          <GeneratorPanel hasCreatorMonthlyAccess={hasCreatorMonthlyAccess} templates={templates} />
+          <GeneratorPanel
+            customTemplatesEnabled={process.env.CUSTOM_TEMPLATE_FEATURE_ENABLED?.trim() === "true"}
+            hasCreatorMonthlyAccess={hasCreatorMonthlyAccess}
+            initialTemplateId={initialTemplateId}
+            key={initialTemplateId}
+            signedIn={Boolean(session?.user?.id)}
+            templates={templates}
+          />
         </div>
       </section>
       <TemplateGrid templates={templates} />

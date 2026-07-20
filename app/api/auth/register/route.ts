@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSafeAuthCallbackPath } from "@/lib/auth-oauth";
 import {
+  getKnownTurnstileErrorCodes,
+  getTurnstileRegisterErrorCode,
   getTurnstileRegisterCookieOptions,
   turnstileRegisterCookieName,
   turnstileResponseFieldName,
   verifyTurnstileToken,
-  TurnstileConfigError,
-  TurnstileVerificationError,
 } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
@@ -23,10 +23,17 @@ export async function POST(request: NextRequest) {
       remoteIp: getClientIp(request),
     });
   } catch (error) {
-    const errorCode = error instanceof TurnstileConfigError ? "turnstile_not_configured" : "turnstile_failed";
+    const errorCode = getTurnstileRegisterErrorCode(error);
+    const cloudflareErrorCodes = getKnownTurnstileErrorCodes(error);
 
-    if (!(error instanceof TurnstileConfigError || error instanceof TurnstileVerificationError)) {
-      console.error("Unexpected Turnstile verification error", error);
+    if (cloudflareErrorCodes.length > 0) {
+      console.warn("Turnstile verification rejected", { errorCodes: cloudflareErrorCodes });
+    } else if (errorCode === "turnstile_unavailable") {
+      console.error("Turnstile verification service unavailable");
+    } else if (errorCode === "turnstile_not_configured") {
+      console.error("Turnstile verification is not configured");
+    } else if (errorCode === "turnstile_failed") {
+      console.error("Unexpected Turnstile verification failure");
     }
 
     return redirectToRegister(request.url, redirectTo, errorCode);

@@ -1,20 +1,28 @@
 import { getTemplateById } from "@/lib/dance/templates";
 import { standardDanceModelId } from "@/lib/dance/models";
 import type { DanceGenerationTask } from "@/lib/dance/types";
-import type { DanceVideoRequest, ModelProvider } from "@/lib/providers/types";
+import {
+  assertProviderSupportsTemplateSource,
+  type DanceVideoRequest,
+  type ModelProvider,
+} from "@/lib/providers/types";
 
 const samplePreviewUrl =
   "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80";
 
 function buildMockTask(request: DanceVideoRequest, status: DanceGenerationTask["status"]): DanceGenerationTask {
-  const template = getTemplateById(request.templateId);
+  if (request.templateSource.kind !== "platform") {
+    throw new Error("Mock Seedance does not support member-supplied driving videos.");
+  }
+
+  const template = getTemplateById(request.templateSource.templateId);
   const now = new Date().toISOString();
 
   return {
     id: `dance_${request.idempotencyKey.slice(0, 12)}`,
     userId: request.userId,
     status,
-    templateId: request.templateId,
+    templateId: request.templateSource.templateId,
     aspectRatio: request.aspectRatio,
     provider: "mock",
     model: request.modelId,
@@ -34,6 +42,10 @@ export const mockSeedanceProvider: ModelProvider = {
   name: "mock",
   model: standardDanceModelId,
   async submitDanceVideo(request) {
+    if (request.templateSource.kind === "custom") {
+      throw new Error("Mock Seedance does not support member-supplied driving videos.");
+    }
+    assertProviderSupportsTemplateSource(request.modelId, request.templateSource);
     return buildMockTask(request, "submitted");
   },
   async getDanceVideoStatus(taskId) {

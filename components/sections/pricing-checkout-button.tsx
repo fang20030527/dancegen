@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
+import { trackProductEvent } from "@/lib/analytics/client";
 import type { PricingPlanKey } from "@/lib/payments/pricing";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +18,18 @@ type PricingCheckoutButtonProps = {
 export function PricingCheckoutButton({ className, priceKey, variant, label = "Start" }: PricingCheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const checkoutLock = useRef(false);
 
   async function startCheckout() {
+    if (checkoutLock.current) {
+      return;
+    }
+
+    checkoutLock.current = true;
     setIsLoading(true);
     setError(null);
+    trackProductEvent("checkout_start", { source: "pricing" });
+    let keepLockedForNavigation = false;
 
     try {
       const response = await fetch("/api/payments/creem/checkout", {
@@ -34,10 +43,15 @@ export function PricingCheckoutButton({ className, priceKey, variant, label = "S
         throw new Error(payload?.message || "Checkout could not be started.");
       }
 
+      keepLockedForNavigation = true;
       window.location.href = payload.checkoutUrl;
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : "Checkout could not be started.");
       setIsLoading(false);
+    } finally {
+      if (!keepLockedForNavigation) {
+        checkoutLock.current = false;
+      }
     }
   }
 
