@@ -8,8 +8,9 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import {
-  getCustomTemplateConfig,
-  type EnabledCustomTemplateConfig,
+  customTemplateUploadUrlExpiresInSeconds,
+  getCustomTemplateStorageConfig,
+  type CustomTemplateStorageConfig,
 } from "./config.ts";
 
 export type StoredObjectHead = {
@@ -39,12 +40,12 @@ type S3ClientLike = Pick<S3Client, "send">;
 type SignUrl = typeof getSignedUrl;
 
 export class S3CustomTemplateStorage implements CustomTemplateStorage {
-  private readonly config: EnabledCustomTemplateConfig;
+  private readonly config: CustomTemplateStorageConfig;
   private readonly client: S3ClientLike;
   private readonly signUrl: SignUrl;
 
   constructor(
-    config: EnabledCustomTemplateConfig,
+    config: CustomTemplateStorageConfig,
     client: S3ClientLike = createS3Client(config),
     signUrl: SignUrl = getSignedUrl,
   ) {
@@ -65,7 +66,7 @@ export class S3CustomTemplateStorage implements CustomTemplateStorage {
       ContentLength: input.sizeBytes,
     });
     const url = await this.signUrl(this.client as S3Client, command, {
-      expiresIn: this.config.uploadUrlExpiresInSeconds,
+      expiresIn: customTemplateUploadUrlExpiresInSeconds,
     });
 
     return {
@@ -154,7 +155,7 @@ export class S3CustomTemplateStorage implements CustomTemplateStorage {
   }
 }
 
-function createS3Client(config: EnabledCustomTemplateConfig): S3Client {
+function createS3Client(config: CustomTemplateStorageConfig): S3Client {
   return new S3Client({
     region: config.s3Region,
     endpoint: config.s3Endpoint,
@@ -189,13 +190,7 @@ function getConfiguredStorage(): S3CustomTemplateStorage {
     return configuredStorage;
   }
 
-  const config = getCustomTemplateConfig();
-
-  if (!config.enabled) {
-    throw new Error("Custom template storage is unavailable while the feature is disabled.");
-  }
-
-  configuredStorage = new S3CustomTemplateStorage(config);
+  configuredStorage = new S3CustomTemplateStorage(getCustomTemplateStorageConfig());
   return configuredStorage;
 }
 

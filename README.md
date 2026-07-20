@@ -26,6 +26,13 @@ pnpm typecheck
 pnpm build
 ```
 
+## Scheduled cleanup
+
+Configure a Vercel Cron request to `GET /api/cron/custom-template-cleanup` and set
+`CRON_SECRET` in the deployment environment. The route accepts only
+`Authorization: Bearer $CRON_SECRET`, processes at most 100 expired or terminal
+custom-template objects per run, and safely retries failed deletions on a later run.
+
 ## Template Decisions
 
 The `liuxiaopai-demo` template is used as the architectural reference, not copied wholesale. This project keeps the SaaS layers that match the PRD and removes generic chat, image generation, docs, newsletter, credit packs, annual billing, password auth, and full i18n from the first version.
