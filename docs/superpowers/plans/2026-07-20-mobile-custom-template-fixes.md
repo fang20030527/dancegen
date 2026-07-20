@@ -730,7 +730,7 @@ Use GA4 DebugView and browser network inspection. Confirm the event sequence is 
 
 Create `docs/optimization/2026-07-20-ga4-gsc-backlog.md` with P0/P1/P2 items covering product-funnel events, homepage/tool-page deduplication, sitemap/indexing and redirects, generator-page depth, template hub, tutorial/comparison content, safe indexable twerk demand validation, mobile media performance, and GA4 attribution/session reconciliation. For every item include evidence, expected impact, owner type, success metric, and validation window.
 
-- [ ] **Step 7: Commit verification fixes and backlog**
+- [x] **Step 7: Commit verification fixes and backlog**
 
 ```bash
 git add .env.example README.md next.config.mjs package.json pnpm-lock.yaml app components lib docs
@@ -738,7 +738,7 @@ git diff --cached --check
 git commit -m "docs: add launch verification and optimization backlog"
 ```
 
-- [ ] **Step 8: Push and update the draft pull request**
+- [x] **Step 8: Push and update the draft pull request**
 
 Run: `git push -u origin agent/member-custom-template-design`
 Expected: the existing draft PR updates with all implementation commits; keep it draft until production storage, reviewer, and mobile verification evidence are complete.
