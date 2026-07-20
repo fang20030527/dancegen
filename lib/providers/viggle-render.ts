@@ -1,11 +1,17 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve, sep } from "node:path";
 
-import { standardDanceModelId } from "@/lib/dance/models";
-import { getTemplateById } from "@/lib/dance/templates";
-import type { DanceGenerationTask, TaskStatus } from "@/lib/dance/types";
-import { getViggleApiKey, getViggleApiUrl, getViggleModel } from "@/lib/providers/viggle-config";
-import type { DanceVideoRequest, ModelProvider } from "@/lib/providers/types";
+import { standardDanceModelId } from "../dance/models.ts";
+import { getTemplateById } from "../dance/templates.ts";
+import { customTemplateStorage, type CustomTemplateStorage } from "../custom-templates/storage.ts";
+import type { TemplateSource } from "../custom-templates/types.ts";
+import type { DanceGenerationTask, TaskStatus } from "../dance/types.ts";
+import { getViggleApiKey, getViggleApiUrl, getViggleModel } from "./viggle-config.ts";
+import {
+  assertProviderSupportsTemplateSource,
+  type DanceVideoRequest,
+  type ModelProvider,
+} from "./types.ts";
 
 type ViggleRenderStatus = "queued" | "processing" | "complete" | "failed" | "cancelled";
 
@@ -43,6 +49,7 @@ export const viggleRenderProvider: ModelProvider = {
   name: "viggle",
   model: standardDanceModelId,
   async submitDanceVideo(request) {
+    assertProviderSupportsTemplateSource(standardDanceModelId, request.templateSource);
     const job = await createRenderJob(request);
 
     return buildTaskFromViggleJob({
@@ -87,7 +94,7 @@ async function buildRenderFormData(request: DanceVideoRequest) {
   const formData = new FormData();
 
   appendSourceImage(formData, request);
-  await appendDrivingVideo(formData, request.templateId);
+  await appendDrivingVideo(formData, request.templateSource);
   formData.append("model", getViggleModel());
   formData.append("background_mode", "original");
 
@@ -108,8 +115,19 @@ function appendSourceImage(formData: FormData, request: DanceVideoRequest) {
   throw new ViggleProviderError("A source image file or public source image URL is required for Viggle generation.");
 }
 
-async function appendDrivingVideo(formData: FormData, templateId: string) {
-  const template = getTemplateById(templateId);
+export async function appendDrivingVideo(
+  formData: FormData,
+  templateSource: TemplateSource,
+  storage: Pick<CustomTemplateStorage, "getObjectBytes"> = customTemplateStorage,
+) {
+  if (templateSource.kind === "custom") {
+    const videoBytes = await storage.getObjectBytes(templateSource.objectKey);
+    const videoBlob = new Blob([new Uint8Array(videoBytes)], { type: templateSource.mimeType });
+    formData.append("driving_video", videoBlob, getCustomVideoFilename(templateSource.mimeType));
+    return;
+  }
+
+  const template = getTemplateById(templateSource.templateId);
 
   if (!template?.videoPath) {
     throw new ViggleProviderError("The selected dance template does not have a Viggle driving video.");
@@ -120,6 +138,10 @@ async function appendDrivingVideo(formData: FormData, templateId: string) {
   const videoBlob = new Blob([videoBytes], { type: "video/mp4" });
 
   formData.append("driving_video", videoBlob, basename(videoPath));
+}
+
+function getCustomVideoFilename(mimeType: "video/mp4" | "video/webm") {
+  return mimeType === "video/webm" ? "member-driving-video.webm" : "member-driving-video.mp4";
 }
 
 function getPublicSourceUrl(uploadObjectKey: string) {
@@ -194,7 +216,9 @@ function buildTaskFromViggleJob({
     id: job.job_id || request?.idempotencyKey || `viggle_${Date.now()}`,
     userId: request?.userId || "demo-user",
     status,
-    templateId: request?.templateId || "hip-hop",
+    templateId: request ? getTaskTemplateId(request.templateSource) : "hip-hop",
+    customTemplateIngestId:
+      request?.templateSource.kind === "custom" ? request.templateSource.ingestId : undefined,
     aspectRatio: request?.aspectRatio || "9:16",
     provider: "viggle",
     model: getViggleModel(),
@@ -207,6 +231,10 @@ function buildTaskFromViggleJob({
     createdAt: job.created_at || job.enqueued_at || now,
     updatedAt: job.completed_at || now,
   };
+}
+
+function getTaskTemplateId(templateSource: TemplateSource) {
+  return templateSource.kind === "platform" ? templateSource.templateId : "custom-member-video";
 }
 
 function mapViggleStatus(status: string | undefined, fallbackStatus: TaskStatus, previewUrl: string | undefined): TaskStatus {

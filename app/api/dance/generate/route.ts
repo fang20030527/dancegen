@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
+import {
+  GenerationTemplateError,
+  resolveGenerationTemplateSource,
+  submitGenerationWithTemplateReservation,
+  type ResolvedGenerationTemplate,
+} from "@/lib/custom-templates/generation";
+import { customTemplateRepository } from "@/lib/custom-templates/repository";
 import { danceModelIds, getDanceModelOption, isMemberDanceModel, standardDanceModelId } from "@/lib/dance/models";
 import { defaultMotionTransferPrompt } from "@/lib/dance/prompts";
 import { aspectRatios } from "@/lib/dance/types";
@@ -16,7 +23,8 @@ import { assertPromptAllowedByCreemModeration, CreemModerationError } from "@/li
 
 const generationSchema = z.object({
   idempotencyKey: z.string().min(12),
-  templateId: z.string().min(1),
+  templateId: z.string().min(1).optional(),
+  customTemplateToken: z.string().min(1).max(512).optional(),
   aspectRatio: z.enum(aspectRatios),
   modelId: z.enum(danceModelIds).default(standardDanceModelId),
   uploadObjectKey: z.string().min(1).optional(),
@@ -50,18 +58,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const template = getTemplateById(payload.data.templateId);
-
-  if (!template?.isPublic) {
-    return NextResponse.json(
-      {
-        code: "TEMPLATE_NOT_AVAILABLE",
-        message: "This template is not available in the public MVP.",
-      },
-      { status: 403 },
-    );
-  }
-
   const model = getDanceModelOption(payload.data.modelId);
 
   if (!model) {
@@ -72,6 +68,29 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  let resolvedTemplate: ResolvedGenerationTemplate;
+  try {
+    resolvedTemplate = await resolveGenerationTemplateSource(
+      {
+        userId: session.user.id,
+        templateId: payload.data.templateId,
+        customTemplateToken: payload.data.customTemplateToken,
+        modelId: payload.data.modelId,
+      },
+      {
+        repository: customTemplateRepository,
+        hasActiveCreatorSubscription: userHasActiveCreatorSubscription,
+        findPublicTemplate: getTemplateById,
+        now: () => new Date(),
+      },
+    );
+  } catch (error) {
+    if (error instanceof GenerationTemplateError) {
+      return generationTemplateErrorResponse(error);
+    }
+    throw error;
   }
 
   if (isMemberDanceModel(payload.data.modelId) && !(await userHasActiveCreatorSubscription(session.user.id))) {
@@ -110,20 +129,28 @@ export async function POST(request: NextRequest) {
       prompt: buildGenerationModerationPrompt({
         aspectRatio: payload.data.aspectRatio,
         modelId: payload.data.modelId,
-        template,
+        resolvedTemplate,
       }),
     });
 
     const provider = getDanceVideoProvider(payload.data.modelId);
-    const task = await provider.submitDanceVideo({
-      idempotencyKey: payload.data.idempotencyKey,
-      userId: session.user.id,
-      uploadObjectKey: payload.data.uploadObjectKey || "",
-      sourceImageFile,
-      templateId: payload.data.templateId,
-      aspectRatio: payload.data.aspectRatio,
-      modelId: payload.data.modelId,
-    });
+    const task = await submitGenerationWithTemplateReservation(
+      {
+        resolved: resolvedTemplate,
+        userId: session.user.id,
+        submit: () =>
+          provider.submitDanceVideo({
+            idempotencyKey: payload.data.idempotencyKey,
+            userId: session.user.id,
+            uploadObjectKey: payload.data.uploadObjectKey || "",
+            sourceImageFile,
+            templateSource: resolvedTemplate.templateSource,
+            aspectRatio: payload.data.aspectRatio,
+            modelId: payload.data.modelId,
+          }),
+      },
+      customTemplateRepository,
+    );
 
     return NextResponse.json({ task }, { status: 202 });
   } catch (error) {
@@ -139,6 +166,10 @@ export async function POST(request: NextRequest) {
         },
         { status: isBlocked ? 403 : 503 },
       );
+    }
+
+    if (error instanceof GenerationTemplateError) {
+      return generationTemplateErrorResponse(error);
     }
 
     const status = isProviderConfigError(error) ? 503 : 502;
@@ -175,6 +206,7 @@ async function parseMultipartGenerationRequest(request: NextRequest) {
     payload: generationSchema.safeParse({
       idempotencyKey: getFormString(formData, "idempotencyKey"),
       templateId: getFormString(formData, "templateId"),
+      customTemplateToken: getFormString(formData, "customTemplateToken"),
       aspectRatio: getFormString(formData, "aspectRatio"),
       modelId: getFormString(formData, "modelId"),
       uploadObjectKey: getFormString(formData, "uploadObjectKey"),
@@ -212,21 +244,64 @@ function isKnownProviderError(error: unknown): error is Error {
 function buildGenerationModerationPrompt({
   aspectRatio,
   modelId,
-  template,
+  resolvedTemplate,
 }: {
   aspectRatio: string;
   modelId: string;
-  template: NonNullable<ReturnType<typeof getTemplateById>>;
+  resolvedTemplate: ResolvedGenerationTemplate;
 }) {
+  const templateDescription = resolvedTemplate.moderationTemplate
+    ? [
+        `Template: ${resolvedTemplate.moderationTemplate.name}. ${resolvedTemplate.moderationTemplate.description}`,
+        `Template motion hint: ${resolvedTemplate.moderationTemplate.modelHints.motion}`,
+        `Template camera hint: ${resolvedTemplate.moderationTemplate.modelHints.camera}`,
+        `Template safety hint: ${resolvedTemplate.moderationTemplate.modelHints.safety}`,
+      ]
+    : [
+        "Template: approved member-supplied driving video.",
+        "The driving video passed the separate custom-template safety review.",
+      ];
+
   return [
     "DanceClip AI photo-to-dance video generation request.",
     "User-supplied free-text prompt: none.",
     `Backend model instruction: ${defaultMotionTransferPrompt}`,
-    `Template: ${template.name}. ${template.description}`,
-    `Template motion hint: ${template.modelHints.motion}`,
-    `Template camera hint: ${template.modelHints.camera}`,
-    `Template safety hint: ${template.modelHints.safety}`,
+    ...templateDescription,
     `Model: ${modelId}. Aspect ratio: ${aspectRatio}.`,
     "Only authorized adult solo source photos are allowed. Do not generate explicit, sexually suggestive, non-consensual, minor, impersonation, face-swap, deepfake, hateful, violent, illegal, or safety-bypass content.",
   ].join("\n");
+}
+
+function generationTemplateErrorResponse(error: GenerationTemplateError) {
+  const response = getGenerationTemplateErrorDetails(error.code);
+  return NextResponse.json(
+    { code: error.code, message: response.message },
+    { status: response.status },
+  );
+}
+
+function getGenerationTemplateErrorDetails(code: GenerationTemplateError["code"]): {
+  status: number;
+  message: string;
+} {
+  switch (code) {
+    case "TEMPLATE_SELECTION_INVALID":
+      return { status: 400, message: "Choose exactly one platform or custom video template." };
+    case "TEMPLATE_NOT_AVAILABLE":
+      return { status: 403, message: "This template is not available in the public MVP." };
+    case "CUSTOM_TEMPLATE_MEMBER_REQUIRED":
+      return { status: 402, message: "Activate the Creator plan before using a custom video template." };
+    case "CUSTOM_TEMPLATE_MODEL_REQUIRED":
+      return { status: 409, message: "Custom video templates currently require Viggle V4 Preview." };
+    case "CUSTOM_TEMPLATE_EXPIRED":
+      return { status: 410, message: "This custom video template has expired. Import it again to continue." };
+    case "CUSTOM_TEMPLATE_ALREADY_CONSUMED":
+      return { status: 409, message: "This custom video template has already been used for a generation." };
+    case "CUSTOM_TEMPLATE_ALREADY_RESERVED":
+      return { status: 409, message: "This custom video template is already being used for a generation." };
+    case "CUSTOM_TEMPLATE_NOT_READY":
+      return { status: 409, message: "Wait for the custom video template review to finish before generating." };
+    case "CUSTOM_TEMPLATE_NOT_AVAILABLE":
+      return { status: 404, message: "This custom video template is unavailable." };
+  }
 }

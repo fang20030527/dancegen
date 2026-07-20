@@ -3,7 +3,11 @@ import { defaultMotionTransferPrompt } from "@/lib/dance/prompts";
 import { getTemplateById } from "@/lib/dance/templates";
 import type { DanceGenerationTask, TaskStatus } from "@/lib/dance/types";
 import { getConfiguredProviderModelId, getEvolinkApiKey, getEvolinkApiUrl } from "@/lib/providers/evolink-config";
-import type { DanceVideoRequest, ModelProvider } from "@/lib/providers/types";
+import {
+  assertProviderSupportsTemplateSource,
+  type DanceVideoRequest,
+  type ModelProvider,
+} from "@/lib/providers/types";
 
 type EvolinkTaskStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -42,6 +46,7 @@ export const evolinkSeedanceProvider: ModelProvider = {
   name: "evolink",
   model: advancedDanceModelId,
   async submitDanceVideo(request) {
+    assertProviderSupportsTemplateSource(advancedDanceModelId, request.templateSource);
     const task = await createVideoGeneration(request);
 
     return buildTaskFromEvolinkTask({
@@ -88,7 +93,11 @@ async function getTaskDetail(taskId: string): Promise<EvolinkTask> {
 }
 
 function buildGenerationPayload(request: DanceVideoRequest) {
-  const template = getTemplateById(request.templateId);
+  if (request.templateSource.kind !== "platform") {
+    throw new EvolinkProviderError("Seedance does not support member-supplied driving videos.");
+  }
+
+  const template = getTemplateById(request.templateSource.templateId);
   const duration = template?.durationSeconds ?? 5;
 
   return {
@@ -145,7 +154,8 @@ function buildTaskFromEvolinkTask({
     id: task.id || request?.idempotencyKey || `task_${Date.now()}`,
     userId: request?.userId || "demo-user",
     status,
-    templateId: request?.templateId || "hip-hop",
+    templateId:
+      request?.templateSource.kind === "platform" ? request.templateSource.templateId : "hip-hop",
     aspectRatio: request?.aspectRatio || "9:16",
     provider: "evolink",
     model: providerModel,

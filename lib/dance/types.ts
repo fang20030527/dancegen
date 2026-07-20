@@ -43,6 +43,7 @@ export type DanceGenerationTask = {
   userId: string;
   status: TaskStatus;
   templateId: string;
+  customTemplateIngestId?: string;
   aspectRatio: AspectRatio;
   provider: string;
   model: string;
