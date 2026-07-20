@@ -698,12 +698,12 @@ git commit -m "feat: measure and govern custom templates"
 - Consumes: the complete implementation.
 - Produces: an evidence-backed release decision and the GA4/GSC optimization backlog requested by the user.
 
-- [ ] **Step 1: Run the complete automated suite**
+- [x] **Step 1: Run the complete automated suite**
 
 Run: `pnpm test && pnpm lint && pnpm typecheck && pnpm build`
 Expected: every command exits 0 with no new warnings attributable to this change.
 
-- [ ] **Step 2: Verify the feature-off production path**
+- [x] **Step 2: Verify the feature-off production path**
 
 With `CUSTOM_TEMPLATE_FEATURE_ENABLED=false`, open 390×844 and 412×915 viewports. Upload/URL tabs must show a clear unavailable state or remain hidden according to the final UI copy; platform generation, previews, links, login, and checkout must remain functional.
 
@@ -726,7 +726,7 @@ On mobile Safari and Chrome emulation, verify upload/URL tap targets, large prev
 
 Use GA4 DebugView and browser network inspection. Confirm the event sequence is emitted once per transition and contains no URL, token, filename, object key, signed credential, or media payload. Confirm Clarity masks custom-template inputs and preview metadata.
 
-- [ ] **Step 6: Write the requested optimization backlog**
+- [x] **Step 6: Write the requested optimization backlog**
 
 Create `docs/optimization/2026-07-20-ga4-gsc-backlog.md` with P0/P1/P2 items covering product-funnel events, homepage/tool-page deduplication, sitemap/indexing and redirects, generator-page depth, template hub, tutorial/comparison content, safe indexable twerk demand validation, mobile media performance, and GA4 attribution/session reconciliation. For every item include evidence, expected impact, owner type, success metric, and validation window.
 
