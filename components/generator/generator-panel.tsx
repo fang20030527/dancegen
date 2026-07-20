@@ -4,6 +4,7 @@
 
 import { ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   CheckCircle2,
   ChevronRight,
@@ -11,7 +12,6 @@ import {
   Film,
   FileWarning,
   ImageUp,
-  LinkIcon,
   Loader2,
   LockKeyhole,
   Upload,
@@ -29,6 +29,7 @@ import {
 } from "@/lib/dance/generator-readiness";
 import { danceModelOptions, standardDanceModelId, type DanceModelId } from "@/lib/dance/models";
 import { referenceImages, type ReferenceImage } from "@/lib/dance/reference-images";
+import { getInitialTemplateId } from "@/lib/dance/template-selection";
 import type { AspectRatio, DanceGenerationTask, DanceTemplate, UploadReviewResult } from "@/lib/dance/types";
 import { pricingPlans, type PricingPlanKey } from "@/lib/payments/pricing";
 import { cn } from "@/lib/utils";
@@ -43,12 +44,14 @@ type GeneratorPanelProps = {
   hasCreatorMonthlyAccess?: boolean;
   signedIn?: boolean;
   customTemplatesEnabled?: boolean;
+  initialTemplateId?: string;
 };
 
 const aspectOptions: AspectRatio[] = ["9:16"];
 const visibleTemplateCount = 4;
 const visibleReferenceImageCount = 4;
 const assetTabs: AssetTab[] = ["library", "upload", "url"];
+const sourceAssetTabs: AssetTab[] = ["library", "upload"];
 
 const assetTabLabels: Record<AssetTab, string> = {
   library: "Library",
@@ -88,10 +91,24 @@ function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function AssetTabs({ activeTab, onChange }: { activeTab: AssetTab; onChange: (tab: AssetTab) => void }) {
+function AssetTabs({
+  activeTab,
+  availableTabs = assetTabs,
+  onChange,
+}: {
+  activeTab: AssetTab;
+  availableTabs?: AssetTab[];
+  onChange: (tab: AssetTab) => void;
+}) {
   return (
-    <div className="grid grid-cols-3 rounded-[16px] bg-white/8 p-1 text-sm font-black text-paper/52" role="tablist">
-      {assetTabs.map((tab) => (
+    <div
+      className={cn(
+        "grid rounded-[16px] bg-white/8 p-1 text-sm font-black text-paper/52",
+        availableTabs.length === 2 ? "grid-cols-2" : "grid-cols-3",
+      )}
+      role="tablist"
+    >
+      {availableTabs.map((tab) => (
         <button
           className={cn(
             "rounded-[12px] px-3 py-2 transition hover:text-paper",
@@ -137,9 +154,17 @@ export function GeneratorPanel({
   hasCreatorMonthlyAccess = false,
   signedIn = false,
   customTemplatesEnabled = false,
+  initialTemplateId,
 }: GeneratorPanelProps) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "hip-hop");
-  const [templateWindowStart, setTemplateWindowStart] = useState(0);
+  const validatedInitialTemplateId = getInitialTemplateId(initialTemplateId, templates);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(() =>
+    validatedInitialTemplateId,
+  );
+  const [templateWindowStart, setTemplateWindowStart] = useState(() => {
+    const selectedIndex = templates.findIndex((template) => template.id === validatedInitialTemplateId);
+
+    return selectedIndex < 0 ? 0 : Math.floor(selectedIndex / visibleTemplateCount) * visibleTemplateCount;
+  });
   const [referenceImageWindowStart, setReferenceImageWindowStart] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [selectedModelId, setSelectedModelId] = useState<DanceModelId>(standardDanceModelId);
@@ -161,7 +186,7 @@ export function GeneratorPanel({
   const [customTemplateState, setCustomTemplateState] = useState<GeneratorTemplateState>("idle");
   const [customTemplateSelection, setCustomTemplateSelection] = useState<CustomTemplateSelection | null>(null);
   const [usedCustomTemplateIngestId, setUsedCustomTemplateIngestId] = useState<string | null>(null);
-  const [sourceUrl, setSourceUrl] = useState("");
+  const generationSubmissionLock = useRef(false);
 
   const visibleTemplates = useMemo(() => getVisibleTemplateWindow(templates, templateWindowStart), [templateWindowStart, templates]);
   const visibleReferenceImages = useMemo(
@@ -319,66 +344,84 @@ export function GeneratorPanel({
   }
 
   async function submitGeneration() {
-    const submittedCustomIngestId = customTemplateActive ? customTemplateSelection?.ingestId ?? null : null;
-    const approvedReviewResult =
-      reviewState === "passed" && reviewResult?.allowed ? reviewResult : await reviewUpload();
-
-    if (!approvedReviewResult?.allowed) {
+    if (generationSubmissionLock.current) {
       return;
     }
 
-    setGenerationState("submitting");
-    setError(null);
+    generationSubmissionLock.current = true;
+    let keepLockedForNavigation = false;
 
-    const formData = new FormData();
-    formData.append("idempotencyKey", createIdempotencyKey());
-    if (customTemplateActive && customTemplateSelection) {
-      formData.append("customTemplateToken", customTemplateSelection.customTemplateToken);
-    } else {
-      formData.append("templateId", selectedTemplateId);
-    }
-    formData.append("aspectRatio", aspectRatio);
-    formData.append("modelId", selectedModelId);
-    formData.append("rightsConfirmed", String(rightsConfirmed));
+    try {
+      const submittedCustomIngestId = customTemplateActive ? customTemplateSelection?.ingestId ?? null : null;
+      const approvedReviewResult =
+        reviewState === "passed" && reviewResult?.allowed ? reviewResult : await reviewUpload();
 
-    if (approvedReviewResult.uploadObjectKey) {
-      formData.append("uploadObjectKey", approvedReviewResult.uploadObjectKey);
-    }
+      if (!approvedReviewResult?.allowed) {
+        return;
+      }
 
-    if (file) {
-      formData.append("image", file);
-    }
+      setGenerationState("submitting");
+      setError(null);
 
-    const response = await fetch("/api/dance/generate", {
-      method: "POST",
-      body: formData,
-    });
+      const formData = new FormData();
+      formData.append("idempotencyKey", createIdempotencyKey());
+      if (customTemplateActive && customTemplateSelection) {
+        formData.append("customTemplateToken", customTemplateSelection.customTemplateToken);
+      } else {
+        formData.append("templateId", selectedTemplateId);
+      }
+      formData.append("aspectRatio", aspectRatio);
+      formData.append("modelId", selectedModelId);
+      formData.append("rightsConfirmed", String(rightsConfirmed));
 
-    if (response.status === 401) {
-      window.location.assign("/register?redirectTo=/ai-dance-generator");
-      return;
-    }
+      if (approvedReviewResult.uploadObjectKey) {
+        formData.append("uploadObjectKey", approvedReviewResult.uploadObjectKey);
+      }
 
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+      if (file) {
+        formData.append("image", file);
+      }
+
+      const response = await fetch("/api/dance/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.status === 401) {
+        keepLockedForNavigation = true;
+        window.location.assign("/register?redirectTo=%2Fai-dance-generator%23generator");
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        setGenerationState("error");
+        setError(payload?.message || "Generation could not start. Try another image or template.");
+        return;
+      }
+
+      const { task: submittedTask } = (await response.json()) as { task: DanceGenerationTask };
+      if (submittedCustomIngestId) {
+        setUsedCustomTemplateIngestId(submittedCustomIngestId);
+      }
+      setTask(submittedTask);
+      setGenerationState("processing");
+
+      if (isTerminalTask(submittedTask)) {
+        setGenerationState(submittedTask.status === "succeeded" ? "succeeded" : "error");
+        return;
+      }
+
+      await pollGenerationTask(submittedTask.id);
+    } catch {
       setGenerationState("error");
-      setError(payload?.message || "Generation could not start. Try another image or template.");
-      return;
+      setReviewState((currentState) => (currentState === "reviewing" ? "idle" : currentState));
+      setError("Generation could not start. Check your connection and try again.");
+    } finally {
+      if (!keepLockedForNavigation) {
+        generationSubmissionLock.current = false;
+      }
     }
-
-    const { task: submittedTask } = (await response.json()) as { task: DanceGenerationTask };
-    if (submittedCustomIngestId) {
-      setUsedCustomTemplateIngestId(submittedCustomIngestId);
-    }
-    setTask(submittedTask);
-    setGenerationState("processing");
-
-    if (isTerminalTask(submittedTask)) {
-      setGenerationState(submittedTask.status === "succeeded" ? "succeeded" : "error");
-      return;
-    }
-
-    await pollGenerationTask(submittedTask.id);
   }
 
   async function pollGenerationTask(taskId: string) {
@@ -466,14 +509,15 @@ export function GeneratorPanel({
         "mx-auto grid w-full gap-6 rounded-[28px] border border-ink/10 bg-white/82 p-4 shadow-studio-soft backdrop-blur md:grid-cols-[minmax(280px,380px)_1fr] md:p-6",
         compact && "shadow-none",
       )}
+      id="generator"
     >
       <div className="flex self-start rounded-[24px] border border-ink/10 bg-ink p-3 text-paper">
         <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[18px] bg-studio">
           {previewVideoPath ? (
             <video
               key={previewVideoPath}
-              autoPlay
               className="h-full w-full object-cover"
+              controls
               loop
               muted
               playsInline
@@ -512,6 +556,7 @@ export function GeneratorPanel({
             </div>
             <AssetTabs
               activeTab={sourceAssetTab}
+              availableTabs={sourceAssetTabs}
               onChange={(tab) => {
                 if (sourceAssetTab === tab) return;
                 setSourceAssetTab(tab);
@@ -604,23 +649,6 @@ export function GeneratorPanel({
                     </span>
                   </span>
                 </label>
-              ) : null}
-              {sourceAssetTab === "url" ? (
-                <div className="flex min-h-[136px] items-center gap-3 rounded-[18px] border border-dashed border-paper/24 bg-[#111110] p-3">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-white/10 text-paper/66">
-                    <LinkIcon aria-hidden="true" size={24} strokeWidth={1.9} />
-                  </span>
-                  <label className="min-w-0 flex-1">
-                    <span className="block text-sm font-black text-paper">Reference image URL</span>
-                    <input
-                      className="mt-2 w-full rounded-full border border-paper/14 bg-black/30 px-4 py-2 text-sm font-semibold text-paper outline-none transition placeholder:text-paper/28 focus:border-acid"
-                      onChange={(event) => setSourceUrl(event.target.value)}
-                      placeholder="Paste image URL"
-                      type="url"
-                      value={sourceUrl}
-                    />
-                  </label>
-                </div>
               ) : null}
             </div>
           </div>
@@ -778,7 +806,16 @@ export function GeneratorPanel({
             )}
             {reviewState === "reviewing" ? "Checking" : isGenerating ? "Generating" : "Generate"}
           </Button>
-          {!readiness.ready ? <p className="mt-2 text-center text-xs font-semibold leading-5 text-ink/58">{readiness.message}</p> : null}
+          {!readiness.ready ? (
+            <div className="mt-2 text-center">
+              <p className="text-xs font-semibold leading-5 text-ink/58">{readiness.message}</p>
+              {!signedIn && readiness.message.startsWith("Continue with Google") ? (
+                <Button asChild className="mt-2" size="sm" variant="dark">
+                  <Link href="/register?redirectTo=%2Fai-dance-generator%23generator">Continue with Google</Link>
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {reviewResult ? (

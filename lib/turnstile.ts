@@ -1,4 +1,13 @@
 const turnstileVerifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const knownTurnstileErrorCodes = new Set([
+  "bad-request",
+  "internal-error",
+  "invalid-input-response",
+  "invalid-input-secret",
+  "missing-input-response",
+  "missing-input-secret",
+  "timeout-or-duplicate",
+]);
 
 export const turnstileResponseFieldName = "cf-turnstile-response";
 export const turnstileRegisterCookieName = "danceclip_turnstile_register";
@@ -36,6 +45,63 @@ export class TurnstileVerificationError extends Error {
   }
 }
 
+export class TurnstileUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TurnstileUnavailableError";
+  }
+}
+
+export type TurnstileRegisterErrorCode =
+  | "turnstile_expired"
+  | "turnstile_failed"
+  | "turnstile_not_configured"
+  | "turnstile_required"
+  | "turnstile_unavailable";
+
+export function getTurnstileRegisterErrorCode(
+  error: unknown,
+): TurnstileRegisterErrorCode {
+  if (error instanceof TurnstileConfigError) {
+    return "turnstile_not_configured";
+  }
+
+  if (error instanceof TurnstileUnavailableError) {
+    return "turnstile_unavailable";
+  }
+
+  if (
+    error instanceof TurnstileVerificationError &&
+    error.errorCodes.includes("internal-error")
+  ) {
+    return "turnstile_unavailable";
+  }
+
+  if (
+    error instanceof TurnstileVerificationError &&
+    error.errorCodes.includes("missing-input-response")
+  ) {
+    return "turnstile_required";
+  }
+
+  if (
+    error instanceof TurnstileVerificationError &&
+    error.errorCodes.includes("timeout-or-duplicate")
+  ) {
+    return "turnstile_expired";
+  }
+
+  return "turnstile_failed";
+}
+
+export function getKnownTurnstileErrorCodes(error: unknown) {
+  if (!(error instanceof TurnstileVerificationError)) {
+    return [];
+  }
+
+  return error.errorCodes.filter((code) => knownTurnstileErrorCodes.has(code));
+}
+
 export function getTurnstileSiteKey(env: TurnstileEnv = process.env) {
   return env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 }
@@ -68,21 +134,37 @@ export async function verifyTurnstileToken({
     body.append("remoteip", remoteIp);
   }
 
-  const response = await fetchImpl(turnstileVerifyUrl, {
-    method: "POST",
-    body,
-  });
+  let response: Response;
 
-  if (!response.ok) {
-    throw new TurnstileVerificationError("Turnstile verification request failed.");
+  try {
+    response = await fetchImpl(turnstileVerifyUrl, {
+      method: "POST",
+      body,
+    });
+  } catch {
+    throw new TurnstileUnavailableError("Turnstile verification is unavailable.");
   }
 
-  const result = (await response.json().catch(() => null)) as TurnstileVerifyResponse | null;
+  if (!response.ok) {
+    throw new TurnstileUnavailableError("Turnstile verification is unavailable.");
+  }
 
-  if (result?.success !== true) {
+  let result: TurnstileVerifyResponse | null;
+
+  try {
+    result = (await response.json()) as TurnstileVerifyResponse | null;
+  } catch {
+    throw new TurnstileUnavailableError("Turnstile verification is unavailable.");
+  }
+
+  if (!result) {
+    throw new TurnstileUnavailableError("Turnstile verification is unavailable.");
+  }
+
+  if (result.success !== true) {
     throw new TurnstileVerificationError(
       "Turnstile challenge was not accepted.",
-      Array.isArray(result?.["error-codes"]) ? result["error-codes"] : [],
+      Array.isArray(result["error-codes"]) ? result["error-codes"] : [],
     );
   }
 
