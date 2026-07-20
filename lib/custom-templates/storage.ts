@@ -10,7 +10,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   getCustomTemplateConfig,
   type EnabledCustomTemplateConfig,
-} from "./config";
+} from "./config.ts";
 
 export type StoredObjectHead = {
   contentType: string;
