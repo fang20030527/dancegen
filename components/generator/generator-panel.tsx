@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- Blob preview URLs are user-selected local files, not remote optimized assets. */
 
-import { ChangeEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   CheckCircle2,
@@ -19,6 +19,14 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  CustomTemplatePicker,
+  type CustomTemplateSelection,
+} from "@/components/generator/custom-template-picker";
+import {
+  getGeneratorReadiness,
+  type GeneratorTemplateState,
+} from "@/lib/dance/generator-readiness";
 import { danceModelOptions, standardDanceModelId, type DanceModelId } from "@/lib/dance/models";
 import { referenceImages, type ReferenceImage } from "@/lib/dance/reference-images";
 import type { AspectRatio, DanceGenerationTask, DanceTemplate, UploadReviewResult } from "@/lib/dance/types";
@@ -33,6 +41,8 @@ type GeneratorPanelProps = {
   templates: DanceTemplate[];
   compact?: boolean;
   hasCreatorMonthlyAccess?: boolean;
+  signedIn?: boolean;
+  customTemplatesEnabled?: boolean;
 };
 
 const aspectOptions: AspectRatio[] = ["9:16"];
@@ -80,7 +90,7 @@ function delay(ms: number) {
 
 function AssetTabs({ activeTab, onChange }: { activeTab: AssetTab; onChange: (tab: AssetTab) => void }) {
   return (
-    <div className="grid grid-cols-3 rounded-[16px] bg-white/8 p-1 text-sm font-black text-paper/52">
+    <div className="grid grid-cols-3 rounded-[16px] bg-white/8 p-1 text-sm font-black text-paper/52" role="tablist">
       {assetTabs.map((tab) => (
         <button
           className={cn(
@@ -88,7 +98,12 @@ function AssetTabs({ activeTab, onChange }: { activeTab: AssetTab; onChange: (ta
             activeTab === tab && "bg-acid text-ink hover:text-ink",
           )}
           key={tab}
-          onClick={() => onChange(tab)}
+          onClick={() => {
+            if (activeTab === tab) return;
+            onChange(tab);
+          }}
+          aria-selected={activeTab === tab}
+          role="tab"
           type="button"
         >
           {assetTabLabels[tab]}
@@ -116,12 +131,19 @@ function AssetPlaceholder({
   );
 }
 
-export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAccess = false }: GeneratorPanelProps) {
+export function GeneratorPanel({
+  templates,
+  compact = false,
+  hasCreatorMonthlyAccess = false,
+  signedIn = false,
+  customTemplatesEnabled = false,
+}: GeneratorPanelProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "hip-hop");
   const [templateWindowStart, setTemplateWindowStart] = useState(0);
   const [referenceImageWindowStart, setReferenceImageWindowStart] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [selectedModelId, setSelectedModelId] = useState<DanceModelId>(standardDanceModelId);
+  const lastPlatformModelId = useRef<DanceModelId>(standardDanceModelId);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedReferenceImageId, setSelectedReferenceImageId] = useState<string | null>(null);
@@ -135,8 +157,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
   const [modelUnlockPrompt, setModelUnlockPrompt] = useState<string | null>(null);
   const [sourceAssetTab, setSourceAssetTab] = useState<AssetTab>("library");
   const [templateAssetTab, setTemplateAssetTab] = useState<AssetTab>("library");
+  const templateAssetTabRef = useRef<AssetTab>("library");
+  const [customTemplateState, setCustomTemplateState] = useState<GeneratorTemplateState>("idle");
+  const [customTemplateSelection, setCustomTemplateSelection] = useState<CustomTemplateSelection | null>(null);
+  const [usedCustomTemplateIngestId, setUsedCustomTemplateIngestId] = useState<string | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
-  const [templateUrl, setTemplateUrl] = useState("");
 
   const visibleTemplates = useMemo(() => getVisibleTemplateWindow(templates, templateWindowStart), [templateWindowStart, templates]);
   const visibleReferenceImages = useMemo(
@@ -147,7 +172,8 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
     () => templates.find((template) => template.id === selectedTemplateId) ?? templates[0],
     [selectedTemplateId, templates],
   );
-  const previewVideoPath = task?.previewUrl || task?.watermarkedUrl || selectedTemplate?.videoPath;
+  const customTemplateActive = templateAssetTab !== "library" && Boolean(customTemplateSelection);
+  const previewVideoPath = task?.previewUrl || task?.watermarkedUrl || (customTemplateActive ? customTemplateSelection?.previewUrl : selectedTemplate?.videoPath);
 
   useEffect(() => {
     return () => {
@@ -159,6 +185,9 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const nextFile = event.target.files?.[0] ?? null;
+    if (nextFile === file) {
+      return;
+    }
     setFile(nextFile);
     setPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : null);
     setSelectedReferenceImageId(null);
@@ -172,6 +201,9 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
   }
 
   async function handleReferenceImageSelect(referenceImage: ReferenceImage) {
+    if (selectedReferenceImageId === referenceImage.id || loadingReferenceImageId) {
+      return;
+    }
     setLoadingReferenceImageId(referenceImage.id);
     setError(null);
 
@@ -202,7 +234,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
   }
 
   function handleModelSelect(modelId: DanceModelId) {
+    if (selectedModelId === modelId || customTemplateActive) {
+      return;
+    }
     setSelectedModelId(modelId);
+    lastPlatformModelId.current = modelId;
     setReviewState("idle");
     setReviewResult(null);
     setTask(null);
@@ -214,6 +250,47 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
   function promptModelSubscription(modelName: string) {
     setError(null);
     setModelUnlockPrompt(`Subscribe to Creator to unlock ${modelName}.`);
+  }
+
+  function handleTemplateTabChange(tab: AssetTab) {
+    if (templateAssetTab === tab) {
+      return;
+    }
+    templateAssetTabRef.current = tab;
+    setTemplateAssetTab(tab);
+    if (tab === "library") {
+      setSelectedModelId(lastPlatformModelId.current);
+      return;
+    }
+    if (customTemplateSelection) {
+      setSelectedModelId(standardDanceModelId);
+    }
+  }
+
+  function handleCustomTemplateReady(selection: CustomTemplateSelection) {
+    if (customTemplateSelection?.ingestId === selection.ingestId) {
+      return;
+    }
+    setUsedCustomTemplateIngestId(null);
+    setCustomTemplateSelection(selection);
+    if (templateAssetTabRef.current !== "library") {
+      setSelectedModelId(standardDanceModelId);
+    }
+    setTask(null);
+    setGenerationState("idle");
+    setError(null);
+  }
+
+  function handleCustomTemplateClear() {
+    setUsedCustomTemplateIngestId(null);
+    if (!customTemplateSelection) {
+      return;
+    }
+    setCustomTemplateSelection(null);
+    setSelectedModelId(lastPlatformModelId.current);
+    setTask(null);
+    setGenerationState("idle");
+    setError(null);
   }
 
   async function reviewUpload() {
@@ -242,6 +319,7 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
   }
 
   async function submitGeneration() {
+    const submittedCustomIngestId = customTemplateActive ? customTemplateSelection?.ingestId ?? null : null;
     const approvedReviewResult =
       reviewState === "passed" && reviewResult?.allowed ? reviewResult : await reviewUpload();
 
@@ -254,7 +332,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
 
     const formData = new FormData();
     formData.append("idempotencyKey", createIdempotencyKey());
-    formData.append("templateId", selectedTemplateId);
+    if (customTemplateActive && customTemplateSelection) {
+      formData.append("customTemplateToken", customTemplateSelection.customTemplateToken);
+    } else {
+      formData.append("templateId", selectedTemplateId);
+    }
     formData.append("aspectRatio", aspectRatio);
     formData.append("modelId", selectedModelId);
     formData.append("rightsConfirmed", String(rightsConfirmed));
@@ -285,6 +367,9 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
     }
 
     const { task: submittedTask } = (await response.json()) as { task: DanceGenerationTask };
+    if (submittedCustomIngestId) {
+      setUsedCustomTemplateIngestId(submittedCustomIngestId);
+    }
     setTask(submittedTask);
     setGenerationState("processing");
 
@@ -358,7 +443,20 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
 
   const isGenerating = generationState === "submitting" || generationState === "processing";
   const isGenerateBusy = reviewState === "reviewing" || isGenerating;
-  const canGenerate = Boolean(file) && !isGenerateBusy && !loadingReferenceImageId;
+  const readiness = getGeneratorReadiness({
+    hasImage: Boolean(file),
+    isBusy: isGenerateBusy || Boolean(loadingReferenceImageId),
+    templateState: templateAssetTab === "library" ? "platform" : customTemplateState,
+    signedIn,
+    hasCreatorAccess: hasCreatorMonthlyAccess,
+    customTemplatesEnabled,
+    customTemplateUsed: Boolean(
+      customTemplateSelection && usedCustomTemplateIngestId === customTemplateSelection.ingestId,
+    ),
+    rightsConfirmed,
+    compatibleModelSelected: selectedModelId === standardDanceModelId,
+  });
+  const canGenerate = readiness.ready;
   const canMoveReferenceImages = referenceImages.length > visibleReferenceImageCount;
   const canMoveTemplates = templates.length > visibleTemplateCount;
 
@@ -412,7 +510,13 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-black">Reference Image</p>
             </div>
-            <AssetTabs activeTab={sourceAssetTab} onChange={setSourceAssetTab} />
+            <AssetTabs
+              activeTab={sourceAssetTab}
+              onChange={(tab) => {
+                if (sourceAssetTab === tab) return;
+                setSourceAssetTab(tab);
+              }}
+            />
             <div className="mt-3">
               {sourceAssetTab === "library" ? (
                 referenceImages.length ? (
@@ -525,7 +629,7 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-black">Video Template</p>
             </div>
-            <AssetTabs activeTab={templateAssetTab} onChange={setTemplateAssetTab} />
+            <AssetTabs activeTab={templateAssetTab} onChange={handleTemplateTabChange} />
             <div className="mt-3">
               {templateAssetTab === "library" ? (
                 <div className="flex items-center gap-2">
@@ -533,14 +637,15 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
                     {visibleTemplates.map((template) => (
                       <button
                         aria-label={`Select ${template.name} template`}
+                        aria-pressed={selectedTemplateId === template.id}
                         className={cn(
                           "relative aspect-[9/16] overflow-hidden rounded-[12px] border-2 border-paper/16 bg-black transition hover:border-paper/44",
                           selectedTemplateId === template.id && "border-[3px] border-acid shadow-acid-ring",
                         )}
                         key={template.id}
                         onClick={() => {
+                          if (selectedTemplateId === template.id) return;
                           setSelectedTemplateId(template.id);
-                          setTemplateAssetTab("library");
                         }}
                         type="button"
                       >
@@ -573,30 +678,18 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
                   </button>
                 </div>
               ) : null}
-              {templateAssetTab === "upload" ? (
-                <AssetPlaceholder
-                  body="Upload a driving video"
-                  icon={<Film aria-hidden="true" size={22} strokeWidth={1.9} />}
-                  title="Upload Template"
+              <div className={templateAssetTab === "library" ? "hidden" : undefined}>
+                <CustomTemplatePicker
+                  enabled={customTemplatesEnabled}
+                  hasCreatorAccess={hasCreatorMonthlyAccess}
+                  mode={templateAssetTab === "url" ? "url" : "upload"}
+                  onClear={handleCustomTemplateClear}
+                  onReady={handleCustomTemplateReady}
+                  onStateChange={setCustomTemplateState}
+                  onUpgrade={() => startCheckout(pricingPlans.creatorMonthly.key)}
+                  signedIn={signedIn}
                 />
-              ) : null}
-              {templateAssetTab === "url" ? (
-                <div className="flex min-h-[136px] items-center gap-3 rounded-[18px] border border-dashed border-paper/24 bg-[#111110] p-3">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-white/10 text-paper/66">
-                    <LinkIcon aria-hidden="true" size={24} strokeWidth={1.9} />
-                  </span>
-                  <label className="min-w-0 flex-1">
-                    <span className="block text-sm font-black text-paper">Video template URL</span>
-                    <input
-                      className="mt-2 w-full rounded-full border border-paper/14 bg-black/30 px-4 py-2 text-sm font-semibold text-paper outline-none transition placeholder:text-paper/28 focus:border-acid"
-                      onChange={(event) => setTemplateUrl(event.target.value)}
-                      placeholder="Paste video URL"
-                      type="url"
-                      value={templateUrl}
-                    />
-                  </label>
-                </div>
-              ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -607,10 +700,11 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
             {danceModelOptions.map((model) => {
               const isSelected = selectedModelId === model.id;
               const isLocked = model.tier === "member" && !hasCreatorMonthlyAccess;
+              const isCustomLocked = customTemplateActive;
 
               return (
                 <button
-                  aria-label={isLocked ? `Subscribe to unlock ${model.name}` : `Select ${model.name}`}
+                  aria-label={isCustomLocked ? `${model.name} is unavailable for custom videos` : isLocked ? `Subscribe to unlock ${model.name}` : `Select ${model.name}`}
                   aria-pressed={isSelected}
                   className={cn(
                     "relative flex min-h-[96px] flex-col items-start rounded-[18px] border border-ink/10 bg-paper p-4 text-left transition hover:border-ink/28",
@@ -619,7 +713,8 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
                   )}
                   key={model.id}
                   onClick={() => (isLocked ? promptModelSubscription(model.name) : handleModelSelect(model.id))}
-                  title={isLocked ? "Subscribe to unlock this model" : model.name}
+                  disabled={isCustomLocked}
+                  title={isCustomLocked ? "Custom videos use Viggle only" : isLocked ? "Subscribe to unlock this model" : model.name}
                   type="button"
                 >
                   <span className="flex w-full items-center justify-between gap-2">
@@ -646,6 +741,9 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
               </Button>
             </div>
           ) : null}
+          {customTemplateActive ? (
+            <p className="mt-2 text-xs font-semibold leading-5 text-ink/58">Custom driving videos use Viggle V4 Preview. Other models do not accept a driving video.</p>
+          ) : null}
         </div>
 
         <div>
@@ -653,12 +751,16 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
           <div className="grid gap-2">
             {aspectOptions.map((option) => (
               <button
+                aria-pressed={aspectRatio === option}
                 className={cn(
                   "rounded-full border border-ink/10 bg-paper px-4 py-3 text-sm font-black transition hover:border-ink/28",
                   aspectRatio === option && "border-ink bg-acid text-ink",
                 )}
                 key={option}
-                onClick={() => setAspectRatio(option)}
+                onClick={() => {
+                  if (aspectRatio === option) return;
+                  setAspectRatio(option);
+                }}
                 type="button"
               >
                 {option}
@@ -676,6 +778,7 @@ export function GeneratorPanel({ templates, compact = false, hasCreatorMonthlyAc
             )}
             {reviewState === "reviewing" ? "Checking" : isGenerating ? "Generating" : "Generate"}
           </Button>
+          {!readiness.ready ? <p className="mt-2 text-center text-xs font-semibold leading-5 text-ink/58">{readiness.message}</p> : null}
         </div>
 
         {reviewResult ? (

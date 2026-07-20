@@ -47,7 +47,12 @@ export default async function AiDanceGeneratorPage() {
               safe preview generation.
             </p>
           </div>
-          <GeneratorPanel hasCreatorMonthlyAccess={hasCreatorMonthlyAccess} templates={templates} />
+          <GeneratorPanel
+            customTemplatesEnabled={process.env.CUSTOM_TEMPLATE_FEATURE_ENABLED?.trim() === "true"}
+            hasCreatorMonthlyAccess={hasCreatorMonthlyAccess}
+            signedIn={Boolean(session?.user?.id)}
+            templates={templates}
+          />
         </div>
       </section>
       <TemplateGrid templates={templates} />

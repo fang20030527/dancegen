@@ -45,7 +45,12 @@ export default async function HomePage() {
           <h2 className="mb-10 max-w-3xl text-4xl font-black leading-tight tracking-normal text-ink md:text-6xl">
             Turn One Photo Into an AI Dance Video
           </h2>
-          <GeneratorPanel hasCreatorMonthlyAccess={hasCreatorMonthlyAccess} templates={templates} />
+          <GeneratorPanel
+            customTemplatesEnabled={process.env.CUSTOM_TEMPLATE_FEATURE_ENABLED?.trim() === "true"}
+            hasCreatorMonthlyAccess={hasCreatorMonthlyAccess}
+            signedIn={Boolean(session?.user?.id)}
+            templates={templates}
+          />
         </div>
       </section>
       <TemplateGrid templates={templates} />
