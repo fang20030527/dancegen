@@ -23,6 +23,13 @@ export default function TermsPage() {
         face-swap or deepfake material, or images where age and consent cannot be reasonably assessed. You must also
         follow the <a href="/acceptable-use">Acceptable Use Policy</a>.
       </p>
+      <h2>Custom driving videos</h2>
+      <p>
+        An eligible Creator member may upload or import a short driving video only when the member owns it or has all
+        permissions needed to use every person and recording in it. Custom videos are private, undergo automated safety
+        review, are not used for model training, and may be used for one generation only. They are deleted after removal,
+        rejection, consumption, failure, or expiry of the 24-hour approval window.
+      </p>
       <h2>Prohibited requests</h2>
       <p>
         You must not request, create, unlock, distribute, or attempt to bypass safeguards for NSFW, explicit, sexually

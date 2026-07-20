@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  getAnalyticsDurationBucket,
+  getAnalyticsSizeBucket,
+  trackProductEvent,
+} from "@/lib/analytics/client";
 import type { CustomTemplatePublicState } from "@/lib/custom-templates/types";
 import type { GeneratorTemplateState } from "@/lib/dance/generator-readiness";
 import { cn } from "@/lib/utils";
@@ -72,6 +77,7 @@ export function CustomTemplatePicker({
   const abortController = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const urlInput = useRef<HTMLInputElement | null>(null);
+  const operationSource = useRef<CustomTemplateMode>(mode);
 
   useEffect(() => {
     onStateChange(pickerState);
@@ -117,6 +123,12 @@ export function CustomTemplatePicker({
       return;
     }
     const controller = beginOperation();
+    operationSource.current = "upload";
+    trackProductEvent("custom_template_upload_start", {
+      source: "upload",
+      state: "validating",
+      sizeBucket: getAnalyticsSizeBucket(file.size),
+    });
     try {
       const result = await uploadCustomTemplate({
         file,
@@ -124,7 +136,14 @@ export function CustomTemplatePicker({
         signal: controller.signal,
         onTransferStart: () => updateState("transferring"),
         onProgress: setProgress,
-        onReviewStart: () => updateState("reviewing"),
+        onReviewStart: () => {
+          trackProductEvent("custom_template_transfer_complete", {
+            source: "upload",
+            state: "reviewing",
+            sizeBucket: getAnalyticsSizeBucket(file.size),
+          });
+          updateState("reviewing");
+        },
       });
       await resolveResult(result, controller.signal);
     } catch (caught) {
@@ -141,6 +160,8 @@ export function CustomTemplatePicker({
       return;
     }
     const controller = beginOperation();
+    operationSource.current = "url";
+    trackProductEvent("custom_template_import_start", { source: "url", state: "validating" });
     await Promise.resolve();
     updateState("transferring");
     try {
@@ -149,6 +170,7 @@ export function CustomTemplatePicker({
         rightsConfirmed,
         signal: controller.signal,
       });
+      trackProductEvent("custom_template_transfer_complete", { source: "url", state: "reviewing" });
       await resolveResult(result, controller.signal);
     } catch (caught) {
       handleOperationError(caught);
@@ -182,6 +204,12 @@ export function CustomTemplatePicker({
         const readySelection = toReadySelection(latest);
         setSelection(readySelection);
         updateState("ready");
+        trackProductEvent("custom_template_review_ready", {
+          source: operationSource.current,
+          state: "ready",
+          sizeBucket: getAnalyticsSizeBucket(readySelection.sizeBytes),
+          durationBucket: getAnalyticsDurationBucket(readySelection.durationSeconds),
+        });
         onReady(readySelection);
         return;
       }
@@ -213,6 +241,14 @@ export function CustomTemplatePicker({
     setSelection(null);
     onClear();
     updateState("failed");
+    trackProductEvent("custom_template_review_failed", {
+      source: operationSource.current,
+      state: "failed",
+      reasonCode:
+        caught instanceof CustomTemplateClientError && caught.code !== "REQUEST_ABORTED"
+          ? caught.code
+          : "INTERNAL_ERROR",
+    });
     setError(caught instanceof CustomTemplateClientError ? caught.message : "The custom video could not be prepared.");
   }
 
@@ -223,6 +259,7 @@ export function CustomTemplatePicker({
     setIsRemoving(true);
     setError(null);
     try {
+      const removedIngest = Boolean(ingest);
       if (ingest) {
         await deleteCustomTemplate(ingest.id);
       }
@@ -236,6 +273,9 @@ export function CustomTemplatePicker({
       setProgress(0);
       updateState("idle");
       onClear();
+      if (removedIngest) {
+        trackProductEvent("custom_template_removed", { source: operationSource.current, state: "removed" });
+      }
       if (shouldFocusReplacement) {
         window.setTimeout(() => mode === "upload" ? fileInput.current?.click() : urlInput.current?.focus(), 0);
       }
@@ -301,7 +341,7 @@ export function CustomTemplatePicker({
       {mode === "upload" ? (
         <>
           <input accept="video/mp4,video/webm" className="sr-only" id="custom-template-file" onChange={handleFileChange} ref={fileInput} type="file" />
-          <label className={cn("flex min-h-[88px] cursor-pointer items-center gap-3 rounded-[14px] border border-paper/12 bg-black/25 p-3 transition hover:border-acid/60", isWorking && "pointer-events-none opacity-60")} htmlFor="custom-template-file" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
+          <label className={cn("flex min-h-[88px] cursor-pointer items-center gap-3 rounded-[14px] border border-paper/12 bg-black/25 p-3 transition hover:border-acid/60", isWorking && "pointer-events-none opacity-60")} data-clarity-mask="true" htmlFor="custom-template-file" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white/8 text-paper/65"><Upload aria-hidden="true" size={22} /></span>
             <span className="min-w-0"><span className="block truncate text-sm font-black text-paper">{file?.name ?? "Choose or drop a video"}</span><span className="mt-1 block text-xs font-semibold leading-5 text-paper/42">MP4 or WebM · 3–15 seconds · up to 50 MB</span></span>
           </label>
@@ -335,11 +375,11 @@ function GateMessage({ title, body, children }: { title: string; body: string; c
 }
 
 function ProgressState({ state, progress }: { state: GeneratorTemplateState; progress: number }) {
-  return <div aria-live="polite" className="mt-3 rounded-[14px] bg-white/6 p-3 text-xs font-semibold text-paper/62"><div className="flex items-center justify-between gap-2"><span>{stateLabel(state)}</span>{state === "transferring" && progress > 0 ? <span>{progress}%</span> : null}</div>{state === "transferring" && progress > 0 ? <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-acid transition-[width]" style={{ width: `${progress}%` }} /></div> : null}</div>;
+  return <div aria-live="polite" className="mt-3 rounded-[14px] bg-white/6 p-3 text-xs font-semibold text-paper/62" data-clarity-mask="true"><div className="flex items-center justify-between gap-2"><span>{stateLabel(state)}</span>{state === "transferring" && progress > 0 ? <span>{progress}%</span> : null}</div>{state === "transferring" && progress > 0 ? <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-acid transition-[width]" style={{ width: `${progress}%` }} /></div> : null}</div>;
 }
 
 function ErrorMessage({ message }: { message: string }) {
-  return <p className="mt-3 rounded-[14px] border border-coral/25 bg-coral/10 p-3 text-xs font-semibold leading-5 text-[#ff9a8b]" role="alert">{message}</p>;
+  return <p className="mt-3 rounded-[14px] border border-coral/25 bg-coral/10 p-3 text-xs font-semibold leading-5 text-[#ff9a8b]" data-clarity-mask="true" role="alert">{message}</p>;
 }
 
 function toReadySelection(state: CustomTemplatePublicState): CustomTemplateSelection {

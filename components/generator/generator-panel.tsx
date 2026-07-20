@@ -20,6 +20,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  getAnalyticsGenerationFailureReason,
+  trackProductEvent,
+  type AnalyticsProperties,
+} from "@/lib/analytics/client";
+import {
   CustomTemplatePicker,
   type CustomTemplateSelection,
 } from "@/components/generator/custom-template-picker";
@@ -187,6 +192,7 @@ export function GeneratorPanel({
   const [customTemplateSelection, setCustomTemplateSelection] = useState<CustomTemplateSelection | null>(null);
   const [usedCustomTemplateIngestId, setUsedCustomTemplateIngestId] = useState<string | null>(null);
   const generationSubmissionLock = useRef(false);
+  const checkoutSubmissionLock = useRef(false);
 
   const visibleTemplates = useMemo(() => getVisibleTemplateWindow(templates, templateWindowStart), [templateWindowStart, templates]);
   const visibleReferenceImages = useMemo(
@@ -298,12 +304,22 @@ export function GeneratorPanel({
     }
     setUsedCustomTemplateIngestId(null);
     setCustomTemplateSelection(selection);
+    trackProductEvent("select_template", { source: "custom", model: standardDanceModelId });
     if (templateAssetTabRef.current !== "library") {
       setSelectedModelId(standardDanceModelId);
     }
     setTask(null);
     setGenerationState("idle");
     setError(null);
+  }
+
+  function handlePlatformTemplateSelect(templateId: string) {
+    if (selectedTemplateId === templateId) {
+      return;
+    }
+
+    setSelectedTemplateId(templateId);
+    trackProductEvent("select_template", { source: "platform", model: selectedModelId });
   }
 
   function handleCustomTemplateClear() {
@@ -350,6 +366,11 @@ export function GeneratorPanel({
 
     generationSubmissionLock.current = true;
     let keepLockedForNavigation = false;
+    const analyticsProperties: AnalyticsProperties = {
+      source: customTemplateActive ? "custom" : "platform",
+      model: selectedModelId,
+    };
+    trackProductEvent("generate_click", analyticsProperties);
 
     try {
       const submittedCustomIngestId = customTemplateActive ? customTemplateSelection?.ingestId ?? null : null;
@@ -357,6 +378,11 @@ export function GeneratorPanel({
         reviewState === "passed" && reviewResult?.allowed ? reviewResult : await reviewUpload();
 
       if (!approvedReviewResult?.allowed) {
+        trackProductEvent("generate_failed", {
+          ...analyticsProperties,
+          state: "failed",
+          reasonCode: approvedReviewResult ? "GENERATION_REJECTED" : "INVALID_REQUEST",
+        });
         return;
       }
 
@@ -388,15 +414,25 @@ export function GeneratorPanel({
       });
 
       if (response.status === 401) {
+        trackProductEvent("generate_failed", {
+          ...analyticsProperties,
+          state: "failed",
+          reasonCode: "GOOGLE_AUTH_REQUIRED",
+        });
         keepLockedForNavigation = true;
         window.location.assign("/register?redirectTo=%2Fai-dance-generator%23generator");
         return;
       }
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        const payload = (await response.json().catch(() => null)) as { code?: unknown; message?: string } | null;
         setGenerationState("error");
         setError(payload?.message || "Generation could not start. Try another image or template.");
+        trackProductEvent("generate_failed", {
+          ...analyticsProperties,
+          state: "failed",
+          reasonCode: getAnalyticsGenerationFailureReason(payload?.code),
+        });
         return;
       }
 
@@ -406,17 +442,28 @@ export function GeneratorPanel({
       }
       setTask(submittedTask);
       setGenerationState("processing");
+      trackProductEvent("generate_start", { ...analyticsProperties, state: "processing" });
 
       if (isTerminalTask(submittedTask)) {
         setGenerationState(submittedTask.status === "succeeded" ? "succeeded" : "error");
+        trackProductEvent(submittedTask.status === "succeeded" ? "generate_success" : "generate_failed", {
+          ...analyticsProperties,
+          state: submittedTask.status === "succeeded" ? "succeeded" : "failed",
+          ...(submittedTask.status === "succeeded" ? {} : { reasonCode: "GENERATION_FAILED" }),
+        });
         return;
       }
 
-      await pollGenerationTask(submittedTask.id);
+      await pollGenerationTask(submittedTask.id, analyticsProperties);
     } catch {
       setGenerationState("error");
       setReviewState((currentState) => (currentState === "reviewing" ? "idle" : currentState));
       setError("Generation could not start. Check your connection and try again.");
+      trackProductEvent("generate_failed", {
+        ...analyticsProperties,
+        state: "failed",
+        reasonCode: "GENERATION_FAILED",
+      });
     } finally {
       if (!keepLockedForNavigation) {
         generationSubmissionLock.current = false;
@@ -424,7 +471,7 @@ export function GeneratorPanel({
     }
   }
 
-  async function pollGenerationTask(taskId: string) {
+  async function pollGenerationTask(taskId: string, analyticsProperties: AnalyticsProperties) {
     for (let attempt = 0; attempt < 24; attempt += 1) {
       await delay(attempt === 0 ? 1200 : 3000);
 
@@ -437,6 +484,11 @@ export function GeneratorPanel({
       if (!statusResponse.ok || !payload?.task) {
         setGenerationState("error");
         setError(payload?.message || "Generation status could not be loaded.");
+        trackProductEvent("generate_failed", {
+          ...analyticsProperties,
+          state: "failed",
+          reasonCode: "STATUS_UNAVAILABLE",
+        });
         return;
       }
 
@@ -444,34 +496,62 @@ export function GeneratorPanel({
 
       if (payload.task.status === "succeeded") {
         setGenerationState("succeeded");
+        trackProductEvent("generate_success", { ...analyticsProperties, state: "succeeded" });
         return;
       }
 
       if (payload.task.status === "failed_refunded" || payload.task.status === "blocked_refunded") {
         setGenerationState("error");
         setError(payload.task.failureReason || "Generation did not complete. Your generation should be refunded.");
+        trackProductEvent("generate_failed", {
+          ...analyticsProperties,
+          state: "failed",
+          reasonCode: "GENERATION_FAILED",
+        });
         return;
       }
     }
 
     setGenerationState("error");
     setError("Generation is still processing. Check the task again in a few minutes.");
+    trackProductEvent("generate_failed", {
+      ...analyticsProperties,
+      state: "failed",
+      reasonCode: "PROCESSING_TIMEOUT",
+    });
   }
 
   async function startCheckout(priceKey: PricingPlanKey = pricingPlans.creatorMonthly.key) {
-    const response = await fetch("/api/payments/creem/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceKey }),
-    });
-    const payload = (await response.json().catch(() => null)) as { checkoutUrl?: string; message?: string } | null;
-
-    if (!response.ok || !payload?.checkoutUrl) {
-      setError(payload?.message || "Checkout could not start. Please try again.");
+    if (checkoutSubmissionLock.current) {
       return;
     }
 
-    window.location.href = payload.checkoutUrl;
+    checkoutSubmissionLock.current = true;
+    let keepLockedForNavigation = false;
+    trackProductEvent("checkout_start", { source: "generator" });
+
+    try {
+      const response = await fetch("/api/payments/creem/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceKey }),
+      });
+      const payload = (await response.json().catch(() => null)) as { checkoutUrl?: string; message?: string } | null;
+
+      if (!response.ok || !payload?.checkoutUrl) {
+        setError(payload?.message || "Checkout could not start. Please try again.");
+        return;
+      }
+
+      keepLockedForNavigation = true;
+      window.location.href = payload.checkoutUrl;
+    } catch {
+      setError("Checkout could not start. Please try again.");
+    } finally {
+      if (!keepLockedForNavigation) {
+        checkoutSubmissionLock.current = false;
+      }
+    }
   }
 
   function showNextTemplateWindow() {
@@ -512,7 +592,7 @@ export function GeneratorPanel({
       id="generator"
     >
       <div className="flex self-start rounded-[24px] border border-ink/10 bg-ink p-3 text-paper">
-        <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[18px] bg-studio">
+        <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[18px] bg-studio" data-clarity-mask="true">
           {previewVideoPath ? (
             <video
               key={previewVideoPath}
@@ -627,6 +707,7 @@ export function GeneratorPanel({
               {sourceAssetTab === "upload" ? (
                 <label
                   className="flex min-h-[136px] cursor-pointer items-center gap-3 rounded-[18px] border border-dashed border-paper/24 bg-[#111110] p-3 transition hover:border-acid/70"
+                  data-clarity-mask="true"
                   htmlFor="source-photo-input"
                 >
                   {previewUrl ? (
@@ -671,10 +752,7 @@ export function GeneratorPanel({
                           selectedTemplateId === template.id && "border-[3px] border-acid shadow-acid-ring",
                         )}
                         key={template.id}
-                        onClick={() => {
-                          if (selectedTemplateId === template.id) return;
-                          setSelectedTemplateId(template.id);
-                        }}
+                        onClick={() => handlePlatformTemplateSelect(template.id)}
                         type="button"
                       >
                         <video
@@ -826,16 +904,17 @@ export function GeneratorPanel({
                 ? "border-moss/20 bg-moss/8 text-moss"
                 : "border-coral/25 bg-coral/8 text-[#9c2416]",
             )}
+            data-clarity-mask="true"
           >
             {reviewResult.allowed ? <CheckCircle2 aria-hidden="true" size={20} /> : <FileWarning aria-hidden="true" size={20} />}
             <span>{reviewResult.userMessage}</span>
           </div>
         ) : null}
 
-        {error ? <div className="rounded-2xl border border-coral/25 bg-coral/8 p-4 text-sm font-semibold text-[#9c2416]">{error}</div> : null}
+        {error ? <div className="rounded-2xl border border-coral/25 bg-coral/8 p-4 text-sm font-semibold text-[#9c2416]" data-clarity-mask="true">{error}</div> : null}
 
         {generationState === "succeeded" && task ? (
-          <div className="rounded-[24px] border border-ink/10 bg-paper p-4">
+          <div className="rounded-[24px] border border-ink/10 bg-paper p-4" data-clarity-mask="true">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-black text-ink">Preview ready</p>

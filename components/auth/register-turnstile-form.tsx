@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 
 import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 import { Button } from "@/components/ui/button";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 type RegisterTurnstileFormProps = {
   errorMessage?: string;
@@ -30,6 +31,7 @@ export function RegisterTurnstileForm({ errorMessage, redirectTo, siteKey }: Reg
 
     submissionLock.current = true;
     setIsSubmitting(true);
+    trackProductEvent("auth_start", { source: "register" });
 
     const nativeEvent = event.nativeEvent;
     queueMicrotask(() => {

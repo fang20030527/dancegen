@@ -1,6 +1,6 @@
-import Link from "next/link";
-
 import type { DanceTemplate } from "@/lib/dance/types";
+
+import { TemplateSelectionLink } from "./template-selection-link";
 
 type TemplateGridProps = {
   templates: DanceTemplate[];
@@ -35,8 +35,8 @@ export function TemplateGrid({ templates }: TemplateGridProps) {
             const showcaseVideoPath = showcaseVideoPathsByTemplateId[template.id] ?? template.videoPath;
 
             return (
-              <Link
-                aria-label={`Try the ${template.name} template`}
+              <TemplateSelectionLink
+                ariaLabel={`Try the ${template.name} template`}
                 className="block rounded-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cobalt"
                 href={`/ai-dance-generator?template=${encodeURIComponent(template.id)}#generator`}
                 key={template.id}
@@ -50,7 +50,7 @@ export function TemplateGrid({ templates }: TemplateGridProps) {
                     TRY NOW
                   </div>
                 </article>
-              </Link>
+              </TemplateSelectionLink>
             );
           })}
         </div>

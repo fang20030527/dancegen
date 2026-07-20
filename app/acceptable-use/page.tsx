@@ -22,6 +22,13 @@ export default function AcceptableUsePage() {
         for confirming the person in the image is an adult, the image rights are yours to use, and the generated result
         will not mislead viewers about consent or identity.
       </p>
+      <h2>Custom driving videos</h2>
+      <p>
+        Upload or import a driving video only if you own the recording or have explicit authorization to use it and every
+        person shown. A custom video must contain permitted adult content, pass automated safety review, and may not be
+        used to evade the source-photo or output safeguards. Custom videos remain private, are not used for model
+        training, and are deleted after removal, rejection, one-time consumption, processing failure, or 24-hour expiry.
+      </p>
       <h2>Prohibited content</h2>
       <p>
         Do not upload, request, generate, unlock, share, or attempt to route content involving nudity, explicit sexual
